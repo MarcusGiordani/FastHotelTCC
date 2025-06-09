@@ -1,4 +1,3 @@
-// src/components/Button/index.tsx
 import React, { ButtonHTMLAttributes } from 'react';
 import { StyledButton } from './styles';
 

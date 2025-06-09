@@ -1,9 +1,8 @@
-// src/pages/Guests/index.tsx
 import React, { useState } from 'react';
-import SideMenu from '../../components/SideMenu'; // O menu lateral
+import SideMenu from '../../components/SideMenu';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faClipboardList, faCreditCard } from '@fortawesome/free-solid-svg-icons'; // Ícones para a tabela
-import { useNavigate } from 'react-router-dom'; // <--- ADICIONE ESTA LINHA
+import { faEdit, faClipboardList, faCreditCard } from '@fortawesome/free-solid-svg-icons';
+import { useNavigate } from 'react-router-dom';
 
 
 import {
@@ -25,7 +24,7 @@ import {
 
 const Guests: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(true); // Menu lateral aberto por padrão
-  const navigate = useNavigate(); // <--- Esta linha agora está correta, pois useNavigate foi importado
+  const navigate = useNavigate();
 
 
   const toggleMenu = () => {

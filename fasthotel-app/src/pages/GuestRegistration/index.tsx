@@ -1,10 +1,9 @@
-// src/pages/GuestRegistration/index.tsx
 import React, { useState } from 'react';
 import SideMenu from '../../components/SideMenu';
-import Input from '../../components/Input'; // Reutilizando o componente Input
-import Button from '../../components/Button'; // Reutilizando o componente Button
+import Input from '../../components/Input';
+import Button from '../../components/Button';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faCalendarAlt, faClock, faRedo } from '@fortawesome/free-solid-svg-icons'; // Ícones de calendário, relógio, refresh
+import { faCalendarAlt, faClock, faRedo } from '@fortawesome/free-solid-svg-icons';
 
 import {
   RegistrationContainer,

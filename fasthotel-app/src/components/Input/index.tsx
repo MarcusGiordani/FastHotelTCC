@@ -1,8 +1,7 @@
-// src/components/Input/index.tsx
 import React, { InputHTMLAttributes } from 'react';
 import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { InputContainer, StyledInputWrapper, StyledInput, Label } from './styles'; // Importe os novos componentes
+import { InputContainer, StyledInputWrapper, StyledInput, Label } from './styles';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   icon?: IconDefinition;

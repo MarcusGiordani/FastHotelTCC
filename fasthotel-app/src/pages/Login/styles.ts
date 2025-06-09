@@ -1,9 +1,8 @@
-// src/pages/Login/styles.ts
 import styled from 'styled-components';
 import { colors } from '../../styles/colors';
 
 interface ContainerProps {
-  backgroundType: 'primary' | 'darkened'; // Novo tipo de background
+  backgroundType: 'primary' | 'darkened';
 }
 
 export const Container = styled.div<ContainerProps>`

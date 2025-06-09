@@ -1,12 +1,11 @@
-// src/routes/index.tsx
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 import Login from '../pages/Login';
 import Home from '../pages/Home';
 import Guests from '../pages/Guests';
-import GuestRegistration from '../pages/GuestRegistration'; // Importe a página de Cadastro
-import Payments from '../pages/Payments'; // Importe a página de Pagamentos
+import GuestRegistration from '../pages/GuestRegistration';
+import Payments from '../pages/Payments';
 
 const AppRoutes: React.FC = () => {
   return (

@@ -1,8 +1,6 @@
-// src/components/Input/styles.ts
 import styled from 'styled-components';
 import { colors } from '../../styles/colors';
 
-// Este é o container visual do input (o campo branco com borda)
 export const StyledInputWrapper = styled.div`
   display: flex;
   align-items: center;
@@ -44,7 +42,6 @@ export const Label = styled.label`
   font-weight: bold;
 `;
 
-// NOVO: Container para o Input completo (label + wrapper + icons)
 export const InputContainer = styled.div`
   display: flex;
   flex-direction: column;

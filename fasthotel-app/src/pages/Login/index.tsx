@@ -1,4 +1,3 @@
-// src/pages/Login/index.tsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { faEye, faEyeSlash, faBars } from '@fortawesome/free-solid-svg-icons';
@@ -13,7 +12,7 @@ import {
   MenuIconContainer,
   Overlay,
 } from './styles';
-import Input from '../../components/Input'; // Nosso Input refatorado
+import Input from '../../components/Input';
 import Button from '../../components/Button';
 import AccountMenu from '../../components/AccountMenu';
 

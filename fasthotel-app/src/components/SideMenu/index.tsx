@@ -1,4 +1,3 @@
-// src/components/SideMenu/index.tsx
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHome, faUsers, faBook, faCreditCard, faComments, faBars } from '@fortawesome/free-solid-svg-icons';

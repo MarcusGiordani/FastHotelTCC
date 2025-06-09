@@ -1,7 +1,6 @@
-// src/components/AccountMenu/index.tsx
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser } from '@fortawesome/free-solid-svg-icons'; // Ícone de usuário
+import { faUser } from '@fortawesome/free-solid-svg-icons';
 import { MenuContainer, MenuItem, MenuTitle } from './styles';
 
 interface AccountMenuProps {

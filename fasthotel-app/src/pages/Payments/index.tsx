@@ -1,8 +1,7 @@
-// src/pages/Payments/index.tsx
 import React, { useState } from 'react';
 import SideMenu from '../../components/SideMenu';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faDollarSign } from '@fortawesome/free-solid-svg-icons'; // Ícone de dólar
+import { faDollarSign } from '@fortawesome/free-solid-svg-icons';
 
 import {
   PaymentsContainer,
@@ -37,7 +36,6 @@ const Payments: React.FC = () => {
 
   const handlePay = (id: number) => {
     alert(`Pagar pelo hóspede ID: ${id}`);
-    // Implementar lógica de pagamento
   };
 
   return (

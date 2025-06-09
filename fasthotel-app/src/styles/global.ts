@@ -1,6 +1,4 @@
-// src/styles/global.ts
 import { createGlobalStyle } from 'styled-components';
-// Não precisamos importar colors aqui, pois o background principal será no componente Login
 
 export const GlobalStyle = createGlobalStyle`
   * {

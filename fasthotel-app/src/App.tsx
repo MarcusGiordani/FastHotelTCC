@@ -1,11 +1,10 @@
-// src/App.tsx
 import React from 'react';
-import AppRoutes from './routes'; // Importe suas rotas
+import AppRoutes from './routes';
 
-const App: React.FC = () => { // <--- Verifique se esta linha e a de baixo estão corretas
+const App: React.FC = () => {
   return (
     <AppRoutes />
   );
-}; // <--- E esta chave de fechamento aqui
+};
 
 export default App;
