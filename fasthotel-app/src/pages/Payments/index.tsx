@@ -1,7 +1,9 @@
+// src/pages/Payments/index.tsx
 import React, { useState } from 'react';
 import SideMenu from '../../components/SideMenu';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faDollarSign } from '@fortawesome/free-solid-svg-icons';
+import { useNavigate } from 'react-router-dom'; // <--- Importe useNavigate
 
 import {
   PaymentsContainer,
@@ -14,12 +16,13 @@ import {
   TableRow,
   TableCell,
   TableActionCell,
-  PageIndicator, // Para o 1/1
-  StatusCell, // Para o PAGAMENTO PAGO/NÃO PAGO
+  PageIndicator,
+  StatusCell,
 } from './styles';
 
 const Payments: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(true);
+  const navigate = useNavigate(); // <--- Inicialize useNavigate
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -35,7 +38,8 @@ const Payments: React.FC = () => {
   ];
 
   const handlePay = (id: number) => {
-    alert(`Pagar pelo hóspede ID: ${id}`);
+    // alert(`Pagar pelo hóspede ID: ${id}`);
+    navigate('/payments/details'); // <--- NAVEGA PARA A TELA DE DETALHES DO PAGAMENTO
   };
 
   return (
@@ -64,13 +68,13 @@ const Payments: React.FC = () => {
                   <TableCell>{payment.nome}</TableCell>
                   <TableCell>{payment.cpf}</TableCell>
                   <TableCell>{payment.apto}</TableCell>
-                  <TableActionCell onClick={() => handlePay(payment.id)}>
+                  <TableActionCell onClick={() => handlePay(payment.id)}> {/* <--- Adicione o onClick aqui */}
                     <FontAwesomeIcon icon={faDollarSign} />
                   </TableActionCell>
                   <StatusCell status={payment.status}>{payment.status}</StatusCell>
                 </TableRow>
               ))}
-              {/* Preencher linhas vazias para visualização */}
+              {/* Preencher linhas vazias */}
               {[...Array(10 - paymentsData.length)].map((_, index) => (
                 <TableRow key={`empty-${index}`}>
                   <TableCell>&nbsp;</TableCell>
