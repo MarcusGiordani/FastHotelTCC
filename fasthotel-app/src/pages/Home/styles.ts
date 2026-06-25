@@ -5,7 +5,7 @@ export const HomeContainer = styled.div`
   display: flex;
   width: 100%;
   min-height: 100vh;
-  background-color: ${colors.white};
+  background-color: var(--card-bg);
 `;
 
 export const MainContent = styled.div<{ isMenuOpen: boolean }>`
@@ -13,12 +13,12 @@ export const MainContent = styled.div<{ isMenuOpen: boolean }>`
   padding: 20px;
   padding-left: ${({ isMenuOpen }) => (isMenuOpen ? '270px' : '20px')};
   transition: padding-left 0.3s ease-in-out;
-  background-color: ${colors.white};
-  color: ${colors.black};
+  background-color: var(--card-bg);
+  color: var(--card-text);
 
   h1 {
     margin-bottom: 20px;
-    color: ${colors.black};
+    color: var(--card-text);
   }
 
   p {

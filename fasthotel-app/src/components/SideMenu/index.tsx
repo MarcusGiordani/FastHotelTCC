@@ -1,9 +1,10 @@
 // src/components/SideMenu/index.tsx
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHome, faUsers, faBook, faCreditCard, faComments, faBars, faCog } from '@fortawesome/free-solid-svg-icons';
-import { MenuContainer, LogoSection, MenuItem, MenuTitle, MenuToggleIcon, SettingsLink } from './styles';
+import { faHome, faUsers, faBook, faCreditCard, faComments, faBars, faCog, faChartBar, faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
+import { MenuContainer, LogoSection, MenuItem, MenuTitle, MenuToggleIcon, SettingsLink, LogoutButton } from './styles';
 import { useLocation, useNavigate } from 'react-router-dom';
+
 
 import logo from '../../assets/logofasthotel.png'; // Certifique-se que o caminho e nome da logo estão corretos
 
@@ -16,8 +17,12 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onToggle }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const handleSettingsClick = () => {
-    navigate('/settings');
+  const handleSettingsClick = () => navigate('/settings');
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user_info');
+    navigate('/');
   };
 
   return (
@@ -54,11 +59,19 @@ const SideMenu: React.FC<SideMenuProps> = ({ isOpen, onToggle }) => {
       <MenuItem href="/chat" active={location.pathname.startsWith('/chat')}>
         <FontAwesomeIcon icon={faComments} /> Chat Virtual
       </MenuItem>
+      {/* Analytics */}
+      <MenuItem href="/analytics" active={location.pathname.startsWith('/analytics')}>
+        <FontAwesomeIcon icon={faChartBar} /> Analytics
+      </MenuItem>
 
-      {/* Ícone de configurações no canto inferior esquerdo */}
       <SettingsLink onClick={handleSettingsClick}>
         <FontAwesomeIcon icon={faCog} />
       </SettingsLink>
+
+      <LogoutButton onClick={handleLogout}>
+        <FontAwesomeIcon icon={faSignOutAlt} />
+        Sair
+      </LogoutButton>
     </MenuContainer>
   );
 };

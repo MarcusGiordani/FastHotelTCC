@@ -1,5 +1,5 @@
 import styled from 'styled-components';
-import { colors } from '../../styles/colors';
+import { colors } from '../../styles/colors'; // Ajuste o caminho se necessário
 
 interface ContainerProps {
   backgroundType: 'primary' | 'darkened';
@@ -12,7 +12,7 @@ export const Container = styled.div<ContainerProps>`
   min-height: 100vh;
   width: 100%;
   background-color: ${({ backgroundType }) =>
-    backgroundType === 'primary' ? colors.primaryBlue : colors.darkBlueBackground}; /* Cor mais escura quando o menu abre */
+    backgroundType === 'primary' ? colors.primaryBlue : colors.darkBlueBackground};
   transition: background-color 0.3s ease-in-out;
   position: relative;
 `;
@@ -24,7 +24,7 @@ export const Content = styled.div`
   padding: 40px 20px;
   width: 100%;
   max-width: 400px;
-  z-index: 1; /* Garante que o conteúdo fique acima do overlay */
+  z-index: 1;
 
   @media (max-width: 768px) {
     max-width: 90%;
@@ -82,7 +82,7 @@ export const MenuIconContainer = styled.div`
   top: 20px;
   right: 20px;
   cursor: pointer;
-  z-index: 100; /* Alto z-index para estar sempre visível */
+  z-index: 100;
   color: ${colors.white};
   font-size: 28px;
 
@@ -99,7 +99,7 @@ export const Overlay = styled.div<{ isOpen: boolean }>`
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.3); /* Escurece o fundo */
-  z-index: 40; /* Abaixo do menu de contas */
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 40;
   display: ${({ isOpen }) => (isOpen ? 'block' : 'none')};
 `;

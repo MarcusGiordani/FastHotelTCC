@@ -82,7 +82,7 @@ export const MenuToggleIcon = styled.div`
 
 export const SettingsLink = styled.div`
   position: absolute;
-  bottom: 20px;
+  bottom: 60px;
   left: 20px;
   color: ${colors.white};
   font-size: 28px;
@@ -96,7 +96,30 @@ export const SettingsLink = styled.div`
 
   @media (max-width: 768px) {
     font-size: 24px;
-    bottom: 15px;
+    bottom: 55px;
     left: 15px;
+  }
+`;
+
+export const LogoutButton = styled.div`
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  color: ${colors.white};
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0.75;
+  transition: opacity 0.2s;
+  z-index: 12;
+
+  &:hover {
+    opacity: 1;
+  }
+
+  svg {
+    font-size: 16px;
   }
 `;

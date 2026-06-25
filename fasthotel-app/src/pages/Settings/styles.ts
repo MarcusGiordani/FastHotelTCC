@@ -6,7 +6,7 @@ export const SettingsContainer = styled.div`
   display: flex;
   width: 100%;
   min-height: 100vh;
-  background-color: ${colors.white};
+  background-color: var(--card-bg);
 `;
 
 export const MainContent = styled.div<{ isMenuOpen: boolean }>`
@@ -14,23 +14,23 @@ export const MainContent = styled.div<{ isMenuOpen: boolean }>`
   padding: 20px;
   padding-left: ${({ isMenuOpen }) => (isMenuOpen ? '270px' : '20px')};
   transition: padding-left 0.3s ease-in-out;
-  background-color: ${colors.darkBlueBackground}; /* Fundo escuro como na imagem */
-  color: ${colors.white}; /* Cor do texto no fundo escuro */
+  background-color: ${colors.darkBlueBackground};
+  color: ${colors.white};
+
   display: flex;
   flex-direction: column;
 
-  @media (max-width: 768px) {
-    padding-left: ${({ isMenuOpen }) => (isMenuOpen ? '220px' : '20px')};
-    padding: 15px;
-  }
+  justify-content: flex-start;
+  align-items: center;
 `;
 
 export const Header = styled.div`
-  background-color: transparent; /* Transparente para o fundo escuro */
+  width: 100%;
+  max-width: 900px;
+
   color: ${colors.white};
-  padding: 20px 0; /* Ajuste o padding para não ter background próprio */
+  padding: 20px 0;
   margin-bottom: 20px;
-  text-align: left; /* Alinha o título à esquerda */
 `;
 
 export const Title = styled.h1`
@@ -39,13 +39,12 @@ export const Title = styled.h1`
 `;
 
 export const Section = styled.div`
-  background-color: ${colors.white}; /* Fundo branco para cada seção de configurações */
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  background: var(--card-bg);
+  padding: 20px;
+  border-radius: 10px;
   margin-bottom: 20px;
-  padding: 30px; /* Padding interno das seções */
-  display: flex;
-  flex-direction: column;
+  width: 100%;
+  max-width: 900px;
 `;
 
 export const SectionTitle = styled.h2`
@@ -72,7 +71,7 @@ export const ThemeCard = styled.div<{ selected: boolean }>`
   padding: 15px;
   border-radius: 10px;
   border: 2px solid ${({ selected }) => (selected ? colors.primaryBlue : colors.grayBorder)};
-  background-color: ${colors.white};
+  background-color: var(--card-bg);
   cursor: pointer;
   transition: all 0.3s ease-in-out;
   box-shadow: ${({ selected }) => (selected ? `0 0 15px rgba(${colors.primaryBlue}, 0.5)` : 'none')};
@@ -93,7 +92,7 @@ export const ThemeImage = styled.img`
 export const ThemeLabel = styled.span`
   font-size: 16px;
   font-weight: bold;
-  color: ${colors.black};
+  color: var(--card-text);
 `;
 
 export const TextOptions = styled.div`
@@ -111,15 +110,17 @@ export const TextOptions = styled.div`
 
 export const OptionGroup = styled.div`
   display: flex;
+  align-items: center;
   flex-direction: column;
-  align-items: center; /* Centraliza label e select */
-  gap: 10px;
+  justify-content: center;
+  gap: 15px;
+  width: 100%;
 `;
 
 export const OptionLabel = styled.label`
+  font-weight: 500;
   font-size: 16px;
-  color: ${colors.black};
-  font-weight: bold;
+  color: var(--card-text);
 `;
 
 export const SelectInput = styled.select`
@@ -127,10 +128,10 @@ export const SelectInput = styled.select`
   padding: 10px 15px;
   height: 48px;
   border-radius: 8px;
-  border: 1px solid ${colors.grayBorder};
-  background-color: ${colors.white};
+  border: 1px solid var(--input-border);
+  background-color: var(--select-bg);
   font-size: 16px;
-  color: ${colors.black};
+  color: var(--select-text);
   outline: none;
   cursor: pointer;
   appearance: none;

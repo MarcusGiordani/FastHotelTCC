@@ -6,7 +6,7 @@ export const ReservationsContainer = styled.div`
   display: flex;
   width: 100%;
   min-height: 100vh;
-  background-color: ${colors.white};
+  background-color: var(--card-bg);
 `;
 
 export const MainContent = styled.div<{ isMenuOpen: boolean }>`
@@ -14,8 +14,8 @@ export const MainContent = styled.div<{ isMenuOpen: boolean }>`
   padding: 20px;
   padding-left: ${({ isMenuOpen }) => (isMenuOpen ? '270px' : '20px')};
   transition: padding-left 0.3s ease-in-out;
-  background-color: ${colors.lightGray}; /* Fundo claro para a área de conteúdo */
-  color: ${colors.black};
+  background-color: var(--page-bg);
+  color: var(--card-text);
   display: flex;
   flex-direction: column;
 
@@ -85,7 +85,7 @@ export const ApartmentGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); /* 5 colunas por linha */
   gap: 20px; /* Espaçamento entre os cards */
   padding: 10px; /* Padding ao redor da grade */
-  background-color: ${colors.white};
+  background-color: var(--card-bg);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 
@@ -103,7 +103,7 @@ export const ApartmentGrid = styled.div`
 `;
 
 export const ApartmentCard = styled.div`
-  background-color: ${colors.lightGray}; /* Fundo cinza claro para os cards */
+  background-color: var(--apartment-card-bg);
   border-radius: 8px;
   padding: 15px;
   display: flex;
@@ -130,7 +130,7 @@ export const ApartmentNumber = styled.div`
 
 export const ApartmentGuest = styled.p`
   font-size: 14px;
-  color: ${colors.black};
+  color: var(--card-text);
   margin-bottom: 15px;
   min-height: 3em; /* Para garantir que o espaço seja consistente mesmo sem hóspede */
 `;

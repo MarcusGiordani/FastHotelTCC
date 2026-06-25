@@ -1,12 +1,12 @@
-// src/pages/PaymentDetails/styles.ts
-import styled from 'styled-components'; // Mantenha apenas styled aqui
+import styled from 'styled-components';
 import { colors } from '../../styles/colors';
+import React from 'react';
 
 export const PaymentDetailsContainer = styled.div`
   display: flex;
   width: 100%;
   min-height: 100vh;
-  background-color: ${colors.white};
+  background-color: var(--card-bg);
 `;
 
 export const MainContent = styled.div<{ isMenuOpen: boolean }>`
@@ -14,8 +14,8 @@ export const MainContent = styled.div<{ isMenuOpen: boolean }>`
   padding: 20px;
   padding-left: ${({ isMenuOpen }) => (isMenuOpen ? '270px' : '20px')};
   transition: padding-left 0.3s ease-in-out;
-  background-color: ${colors.lightGray};
-  color: ${colors.black};
+  background-color: var(--page-bg);
+  color: var(--card-text);
   display: flex;
   flex-direction: column;
   position: relative;
@@ -42,7 +42,7 @@ export const Title = styled.h1`
 `;
 
 export const Section = styled.div`
-  background-color: ${colors.white};
+  background-color: var(--card-bg);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   margin-bottom: 20px;
@@ -50,12 +50,12 @@ export const Section = styled.div`
 `;
 
 export const SectionTitle = styled.h2`
-  background-color: ${colors.lightGray};
-  color: ${colors.black};
+  background-color: var(--table-header-bg);
+  color: var(--table-text);
   padding: 15px 20px;
   font-size: 18px;
   font-weight: bold;
-  border-bottom: 1px solid ${colors.grayBorder};
+  border-bottom: 1px solid var(--input-border);
 `;
 
 export const SectionContent = styled.div`
@@ -73,16 +73,16 @@ export const DetailRow = styled.div`
   line-height: 1.5;
 
   &:not(:last-child) {
-    border-bottom: 1px dashed ${colors.lightGray};
+    border-bottom: 1px dashed var(--table-border);
     padding-bottom: 5px;
   }
   &:last-child {
-      padding-bottom: 0;
+    padding-bottom: 0;
   }
 `;
 
 export const DetailLabel = styled.span`
-  color: ${colors.black};
+  color: var(--detail-label);
   font-weight: normal;
   flex: 1;
 `;
@@ -91,7 +91,7 @@ export const DetailValue = styled.span<{ status?: string }>`
   color: ${({ status }) => {
     if (status === 'Não pago') return '#dc3545';
     if (status === 'Pago') return '#28a745';
-    return colors.black;
+    return 'var(--detail-value)';
   }};
   font-weight: bold;
   text-align: right;
@@ -103,7 +103,7 @@ export const TotalRow = styled(DetailRow)<{ isFinal?: boolean }>`
   margin-top: ${({ isFinal }) => (isFinal ? '15px' : '10px')};
   border-top: ${({ isFinal }) => (isFinal ? `2px solid ${colors.primaryBlue}` : 'none')};
   padding-top: ${({ isFinal }) => (isFinal ? '10px' : '0')};
-  
+
   ${DetailLabel} {
     color: ${colors.primaryBlue};
     font-weight: bold;
@@ -114,14 +114,14 @@ export const TotalRow = styled(DetailRow)<{ isFinal?: boolean }>`
 `;
 
 export const PaymentOptions = styled.div`
-  background-color: ${colors.white};
+  background-color: var(--card-bg);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   padding: 20px;
   margin-bottom: 20px;
   text-align: center;
   font-size: 16px;
-  color: ${colors.black};
+  color: var(--card-text);
 `;
 
 export const FinalActions = styled.div`
@@ -138,26 +138,39 @@ export const FinalActions = styled.div`
   }
 `;
 
-interface ActionButtonProps {
-  variant: 'green' | 'red';
+export interface StyledActionButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant: 'green' | 'red' | 'secondary';
 }
 
-// CORREÇÃO AQUI: Mudança de styled(Button) para styled.button
-export const ActionButton = styled.button<ActionButtonProps>`
-  background-color: ${({ variant }) => (variant === 'green' ? '#28a745' : '#dc3545')};
-  color: ${colors.white};
-  border: none; /* Adicionado borda: none; para garantir que não tenha borda padrão de botão */
-  border-radius: 8px; /* Adicionado border-radius para ser similar ao Button */
-  padding: 10px 15px; /* Adicionado padding */
+export const StyledActionButton = styled.button<StyledActionButtonProps>`
+  background-color: ${({ variant }) => {
+    switch (variant) {
+      case 'green': return '#28a745';
+      case 'red': return '#dc3545';
+      case 'secondary': return '#cccccc';
+      default: return colors.primaryBlue;
+    }
+  }};
+  color: ${({ variant }) => (variant === 'secondary' ? '#000' : colors.white)};
+  border: none;
+  border-radius: 8px;
+  padding: 10px 15px;
   cursor: pointer;
   font-weight: bold;
-  font-size: 16px; /* Tamanho da fonte do botão */
+  font-size: 16px;
   height: 50px;
-  min-width: 150px; /* Adicionado um min-width para os botões */
+  min-width: 150px;
   transition: background-color 0.2s;
 
   &:hover {
-    background-color: ${({ variant }) => (variant === 'green' ? '#218838' : '#c82333')};
+    background-color: ${({ variant }) => {
+      switch (variant) {
+        case 'green': return '#218838';
+        case 'red': return '#c82333';
+        case 'secondary': return '#d0d0d0';
+        default: return '#0056b3';
+      }
+    }};
   }
 
   @media (max-width: 600px) {
@@ -170,7 +183,7 @@ export const SettingsIcon = styled.div`
   bottom: 20px;
   right: 20px;
   font-size: 30px;
-  color: ${colors.black};
+  color: var(--card-text);
   cursor: pointer;
   z-index: 10;
   transition: transform 0.2s;
@@ -182,5 +195,58 @@ export const SettingsIcon = styled.div`
     font-size: 24px;
     bottom: 15px;
     right: 15px;
+  }
+`;
+
+export const PaymentModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+`;
+
+export const PaymentModalContent = styled.form`
+  background: var(--modal-bg);
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+
+  h3 {
+    margin-bottom: 15px;
+    color: ${colors.primaryBlue};
+    text-align: center;
+  }
+
+  label {
+    display: flex;
+    flex-direction: column;
+    font-size: 14px;
+    font-weight: bold;
+    color: var(--label-text);
+  }
+
+  input[type="number"], select {
+    padding: 10px;
+    border: 1px solid var(--input-border);
+    border-radius: 5px;
+    font-size: 16px;
+    margin-top: 5px;
+    background-color: var(--input-bg);
+    color: var(--input-text);
+  }
+
+  button {
+    flex: 1;
   }
 `;

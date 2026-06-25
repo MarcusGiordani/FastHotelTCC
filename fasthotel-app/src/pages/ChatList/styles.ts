@@ -6,7 +6,7 @@ export const ChatListContainer = styled.div`
   display: flex;
   width: 100%;
   min-height: 100vh;
-  background-color: ${colors.white};
+  background-color: var(--card-bg);
 `;
 
 export const MainContent = styled.div<{ isMenuOpen: boolean }>`
@@ -14,8 +14,8 @@ export const MainContent = styled.div<{ isMenuOpen: boolean }>`
   padding: 20px;
   padding-left: ${({ isMenuOpen }) => (isMenuOpen ? '270px' : '20px')};
   transition: padding-left 0.3s ease-in-out;
-  background-color: ${colors.lightGray}; /* Fundo cinza claro */
-  color: ${colors.black};
+  background-color: var(--page-bg);
+  color: var(--card-text);
   display: flex;
   flex-direction: column;
 
@@ -45,7 +45,7 @@ export const ChatCardsGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); /* Colunas flexíveis */
   gap: 20px;
   padding: 10px;
-  background-color: ${colors.white};
+  background-color: var(--card-bg);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 
@@ -58,7 +58,7 @@ export const ChatCardsGrid = styled.div`
 `;
 
 export const ChatCard = styled.div`
-  background-color: ${colors.lightGray};
+  background-color: var(--apartment-card-bg);
   border-radius: 8px;
   padding: 15px;
   display: flex;
@@ -80,7 +80,7 @@ export const ChatCardTitle = styled.h2`
 
 export const ChatInfo = styled.p`
   font-size: 14px;
-  color: ${colors.black};
+  color: var(--card-text);
   font-weight: 500;
 `;
 

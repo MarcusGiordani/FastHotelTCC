@@ -1,8 +1,8 @@
-// src/pages/Settings/index.tsx
 import React, { useState } from 'react';
 import SideMenu from '../../components/SideMenu';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSun, faMoon } from '@fortawesome/free-solid-svg-icons'; // Ícones para claro/escuro
+import ThemeToggle from '../../components/ThemeToggle';
+import { useTheme } from '../../contexts/ThemeContext';
+import { apiFetch } from '../../utils/api';
 
 import {
   SettingsContainer,
@@ -11,10 +11,6 @@ import {
   Title,
   Section,
   SectionTitle,
-  ThemeOptions,
-  ThemeCard,
-  ThemeLabel,
-  ThemeImage,
   TextOptions,
   OptionGroup,
   OptionLabel,
@@ -23,58 +19,95 @@ import {
 
 const Settings: React.FC = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(true);
-  const [selectedTheme, setSelectedTheme] = useState<'light' | 'dark'>('light'); // Estado para o tema
-  const [fontSize, setFontSize] = useState('20'); // Estado para o tamanho da fonte
-  const [fontFamily, setFontFamily] = useState('Arial'); // Estado para a fonte
+  const { isDark, toggleTheme } = useTheme();
 
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
+  const [fontSize, setFontSize] = useState('20');
+  const [fontFamily, setFontFamily] = useState('Arial');
+  const [savedMessage, setSavedMessage] = useState('');
+  const [savedColor, setSavedColor] = useState('#4caf50');
+
+  // Troca de senha
+  const [senhaAtual, setSenhaAtual] = useState('');
+  const [novaSenha, setNovaSenha] = useState('');
+  const [confirmarSenha, setConfirmarSenha] = useState('');
+  const [pwLoading, setPwLoading] = useState(false);
+
+  const showMsg = (msg: string, isError = false) => {
+    setSavedColor(isError ? '#ef4444' : '#4caf50');
+    setSavedMessage(msg);
+    setTimeout(() => setSavedMessage(''), 3000);
   };
 
-  const handleThemeChange = (theme: 'light' | 'dark') => {
-    setSelectedTheme(theme);
-    // Em um app real: Aqui você aplicaria a lógica para mudar o tema globalmente
-    // Ex: salvar no localStorage, atualizar um contexto de tema, ou mudar uma classe no body
-    alert(`Tema selecionado: ${theme === 'light' ? 'Claro' : 'Escuro'}`);
+  const handleFontSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFontSize(e.target.value);
+    document.documentElement.style.fontSize = `${e.target.value}px`;
+    showMsg(`Tamanho da fonte: ${e.target.value}px`);
   };
 
-  const handleFontSizeChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setFontSize(event.target.value);
-    // Em um app real: Lógica para mudar o tamanho da fonte globalmente
-    alert(`Tamanho da fonte: ${event.target.value}`);
+  const handleFontFamilyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFontFamily(e.target.value);
+    document.documentElement.style.fontFamily = e.target.value;
+    showMsg(`Fonte alterada para ${e.target.value}.`);
   };
 
-  const handleFontFamilyChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setFontFamily(event.target.value);
-    // Em um app real: Lógica para mudar a fonte globalmente
-    alert(`Fonte selecionada: ${event.target.value}`);
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (novaSenha.length < 3) { showMsg('A nova senha deve ter pelo menos 3 caracteres.', true); return; }
+    if (novaSenha !== confirmarSenha) { showMsg('As senhas não coincidem.', true); return; }
+
+    setPwLoading(true);
+    try {
+      const res = await apiFetch('/usuarios/change-password', {
+        method: 'PUT',
+        body: JSON.stringify({ senhaAtual, novaSenha }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showMsg('Senha alterada com sucesso!');
+        setSenhaAtual(''); setNovaSenha(''); setConfirmarSenha('');
+      } else {
+        showMsg(data.message || 'Erro ao alterar senha.', true);
+      }
+    } catch {
+      showMsg('Não foi possível conectar ao servidor.', true);
+    } finally {
+      setPwLoading(false);
+    }
+  };
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%',
+    padding: '10px 14px',
+    borderRadius: '8px',
+    border: '1.5px solid var(--input-border, #d1d5db)',
+    background: 'var(--input-bg, #fff)',
+    color: 'var(--input-text, #1f2937)',
+    fontSize: '15px',
+    outline: 'none',
+    marginTop: '4px',
   };
 
   return (
     <SettingsContainer>
-      <SideMenu isOpen={isMenuOpen} onToggle={toggleMenu} />
+      <SideMenu isOpen={isMenuOpen} onToggle={() => setIsMenuOpen(v => !v)} />
       <MainContent isMenuOpen={isMenuOpen}>
         <Header>
           <Title>Configurações</Title>
+          {savedMessage && (
+            <p style={{ color: savedColor, fontSize: '14px', marginTop: '8px' }}>{savedMessage}</p>
+          )}
         </Header>
 
-        <Section>
-          <SectionTitle>Acessibilidade</SectionTitle>
-          <ThemeOptions>
-            <ThemeCard selected={selectedTheme === 'light'} onClick={() => handleThemeChange('light')}>
-              {/* Imagem placeholder para o tema Claro */}
-              <ThemeImage src="https://via.placeholder.com/150x100/F0F0F0/FFFFFF?text=Claro" alt="Tema Claro" />
-              <ThemeLabel>Claro</ThemeLabel>
-            </ThemeCard>
-            <ThemeCard selected={selectedTheme === 'dark'} onClick={() => handleThemeChange('dark')}>
-              {/* Imagem placeholder para o tema Escuro */}
-              <ThemeImage src="https://via.placeholder.com/150x100/333333/FFFFFF?text=Escuro" alt="Tema Escuro" />
-              <ThemeLabel>Escuro</ThemeLabel>
-            </ThemeCard>
-          </ThemeOptions>
+        {/* Tema */}
+        <Section className="dm-card">
+          <OptionGroup>
+            <OptionLabel>Tema</OptionLabel>
+            <ThemeToggle isDark={isDark} toggleTheme={toggleTheme} />
+          </OptionGroup>
         </Section>
 
-        <Section>
+        {/* Fonte */}
+        <Section className="dm-card">
           <SectionTitle>Tamanho e fonte das letras</SectionTitle>
           <TextOptions>
             <OptionGroup>
@@ -96,6 +129,32 @@ const Settings: React.FC = () => {
               </SelectInput>
             </OptionGroup>
           </TextOptions>
+        </Section>
+
+        {/* Alterar senha */}
+        <Section className="dm-card">
+          <SectionTitle>Alterar Senha</SectionTitle>
+          <form onSubmit={handleChangePassword} style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '400px', margin: '0 auto' }}>
+            <div>
+              <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--label-text, #374151)' }}>Senha atual</label>
+              <input type="password" value={senhaAtual} onChange={e => setSenhaAtual(e.target.value)} required style={inputStyle} />
+            </div>
+            <div>
+              <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--label-text, #374151)' }}>Nova senha</label>
+              <input type="password" value={novaSenha} onChange={e => setNovaSenha(e.target.value)} required style={inputStyle} />
+            </div>
+            <div>
+              <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--label-text, #374151)' }}>Confirmar nova senha</label>
+              <input type="password" value={confirmarSenha} onChange={e => setConfirmarSenha(e.target.value)} required style={inputStyle} />
+            </div>
+            <button
+              type="submit"
+              disabled={pwLoading}
+              style={{ padding: '11px', borderRadius: '8px', border: 'none', background: '#2c73d2', color: '#fff', fontWeight: 600, fontSize: '15px', cursor: pwLoading ? 'not-allowed' : 'pointer', opacity: pwLoading ? 0.7 : 1 }}
+            >
+              {pwLoading ? 'Salvando...' : 'Alterar senha'}
+            </button>
+          </form>
         </Section>
       </MainContent>
     </SettingsContainer>

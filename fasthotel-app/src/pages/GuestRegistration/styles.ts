@@ -5,7 +5,7 @@ export const RegistrationContainer = styled.div`
   display: flex;
   width: 100%;
   min-height: 100vh;
-  background-color: ${colors.white};
+  background-color: var(--card-bg);
 `;
 
 export const MainContent = styled.div<{ isMenuOpen: boolean }>`
@@ -13,8 +13,8 @@ export const MainContent = styled.div<{ isMenuOpen: boolean }>`
   padding: 20px;
   padding-left: ${({ isMenuOpen }) => (isMenuOpen ? '270px' : '20px')};
   transition: padding-left 0.3s ease-in-out;
-  background-color: ${colors.lightGray};
-  color: ${colors.black};
+  background-color: var(--page-bg);
+  color: var(--card-text);
   display: flex;
   flex-direction: column;
 
@@ -40,7 +40,7 @@ export const Title = styled.h1`
 `;
 
 export const FormSection = styled.form`
-  background-color: ${colors.white};
+  background-color: var(--card-bg);
   padding: 30px;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
@@ -62,9 +62,6 @@ export const FormGrid = styled.div`
   gap: 20px 30px;
   margin-bottom: 30px;
 
-  /* Os labels agora são gerenciados pelo componente Input internamente */
-  /* Removemos as regras que estavam aqui para labels */
-
   @media (max-width: 600px) {
     grid-template-columns: 1fr;
   }
@@ -72,38 +69,34 @@ export const FormGrid = styled.div`
 
 export const FullWidthInput = styled.div`
   grid-column: 1 / -1;
-  /* Não precisa de margin-top aqui, o InputContainer já tem o espaçamento */
 `;
 
-// RENOMEADO para ser um container para o Input + ícones externos
 export const InputWithIconContainer = styled.div`
   display: flex;
-  flex-direction: column; /* Para o label do Input ficar em cima */
-  position: relative; /* Para posicionar os ícones */
+  flex-direction: column;
+  position: relative;
   width: 100%;
 
-  /* Posiciona os ícones APÓS o componente Input (que é um div) */
-  & > svg:nth-of-type(1) { /* Primeiro ícone (calendário) */
+  & > svg:nth-of-type(1) {
     position: absolute;
     right: 15px;
-    top: 50%; /* Centraliza em relação ao input field */
-    transform: translateY(calc(-50% + 10px)); /* Ajusta para descer abaixo do label */
-    color: ${colors.textLight};
-    font-size: 18px;
-    z-index: 2; /* Garante que o ícone esteja acima do input */
-  }
-  & > svg:nth-of-type(2) { /* Segundo ícone (relógio) */
-    position: absolute;
-    right: 40px; /* Posição para o segundo ícone */
     top: 50%;
     transform: translateY(calc(-50% + 10px));
-    color: ${colors.textLight};
+    color: var(--input-placeholder);
     font-size: 18px;
     z-index: 2;
   }
-  /* Ajuste o padding-right do StyledInputWrapper DENTRO DO INPUT para acomodar ícones */
-  & > div > div { /* Acessa StyledInputWrapper dentro do InputContainer */
-     padding-right: 60px; /* Mais padding para acomodar os 2 ícones */
+  & > svg:nth-of-type(2) {
+    position: absolute;
+    right: 40px;
+    top: 50%;
+    transform: translateY(calc(-50% + 10px));
+    color: var(--input-placeholder);
+    font-size: 18px;
+    z-index: 2;
+  }
+  & > div > div {
+     padding-right: 60px;
   }
 `;
 
@@ -112,26 +105,26 @@ export const SelectInput = styled.div`
   flex-direction: column;
   label {
     font-size: 14px;
-    color: ${colors.black};
+    color: var(--label-text);
     margin-bottom: 5px;
     font-weight: bold;
   }
-  div { /* Para envolver o select e o ícone de refresh */
+  div {
     display: flex;
     align-items: center;
     gap: 5px;
-    position: relative; /* Para posicionar a seta padrão e o ícone de refresh */
-    height: 48px; /* Mesma altura do input */
+    position: relative;
+    height: 48px;
   }
   select {
     width: 100%;
     padding: 10px 15px;
-    height: 100%; /* Ocupa 100% da altura do div pai */
+    height: 100%;
     border-radius: 8px;
-    border: 1px solid ${colors.grayBorder};
-    background-color: ${colors.white};
+    border: 1px solid var(--input-border);
+    background-color: var(--select-bg);
     font-size: 16px;
-    color: ${colors.black};
+    color: var(--select-text);
     outline: none;
     cursor: pointer;
     appearance: none;
@@ -140,14 +133,13 @@ export const SelectInput = styled.div`
     background-position: right 10px center;
     background-size: 12px;
   }
-  /* Posiciona o ícone de refresh ao lado do select */
-  & > div > svg { /* Acessa o ícone SVG dentro do div que envolve o select */
-    position: absolute; /* Torna o ícone absoluto dentro do div pai */
-    right: 30px; /* Ajuste para não sobrepor a seta padrão do select */
+  & > div > svg {
+    position: absolute;
+    right: 30px;
     top: 50%;
     transform: translateY(-50%);
-    color: #666;
-    z-index: 2; /* Garante que o ícone esteja acima do select */
+    color: var(--input-placeholder);
+    z-index: 2;
   }
 `;
 
@@ -156,14 +148,14 @@ export const NumberInputContainer = styled.div`
   flex-direction: column;
   label {
     font-size: 14px;
-    color: ${colors.black};
+    color: var(--label-text);
     margin-bottom: 5px;
     font-weight: bold;
   }
   div {
     display: flex;
     align-items: center;
-    border: 1px solid ${colors.grayBorder};
+    border: 1px solid var(--input-border);
     border-radius: 8px;
     height: 48px;
     overflow: hidden;
@@ -171,8 +163,8 @@ export const NumberInputContainer = styled.div`
 `;
 
 export const NumberInputButton = styled.button`
-  background-color: ${colors.lightGray};
-  color: ${colors.black};
+  background-color: var(--num-btn-bg);
+  color: var(--card-text);
   border: none;
   width: 40px;
   height: 100%;
@@ -198,8 +190,8 @@ export const NumberInput = styled.input`
   border: none;
   outline: none;
   font-size: 16px;
-  color: ${colors.black};
-  background-color: ${colors.white};
+  color: var(--input-text);
+  background-color: var(--input-bg);
   height: 100%;
   -moz-appearance: textfield;
   &::-webkit-outer-spin-button,

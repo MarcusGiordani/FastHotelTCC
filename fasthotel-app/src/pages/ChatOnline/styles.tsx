@@ -6,7 +6,7 @@ export const ChatOnlineContainer = styled.div`
   display: flex;
   width: 100%;
   min-height: 100vh;
-  background-color: ${colors.white};
+  background-color: var(--card-bg);
 `;
 
 export const MainContent = styled.div<{ isMenuOpen: boolean }>`
@@ -14,8 +14,8 @@ export const MainContent = styled.div<{ isMenuOpen: boolean }>`
   padding: 20px;
   padding-left: ${({ isMenuOpen }) => (isMenuOpen ? '270px' : '20px')};
   transition: padding-left 0.3s ease-in-out;
-  background-color: ${colors.lightGray}; /* Fundo cinza claro */
-  color: ${colors.black};
+  background-color: var(--page-bg);
+  color: var(--card-text);
   display: flex;
   flex-direction: column;
   position: relative; /* Para a engrenagem */
@@ -59,7 +59,7 @@ export const GuestInfo = styled.div`
 
 export const ChatArea = styled.div`
   flex: 1; /* Ocupa o espaço restante */
-  background-color: ${colors.white};
+  background-color: var(--card-bg);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   padding: 20px;
@@ -76,13 +76,14 @@ export const ChatArea = styled.div`
 `;
 
 export const MessageBubble = styled.div<{ sender: 'user' | 'reception' }>`
-  background-color: ${({ sender }) => (sender === 'user' ? '#f0f0f0' : colors.primaryBlue)}; /* Cinza para hóspede, azul para recepção */
-  color: ${({ sender }) => (sender === 'user' ? colors.black : colors.white)};
+  /* Cores de fundo e texto dos balões */
+  background-color: ${({ sender }) => (sender === 'user' ? 'var(--msg-user-bg)' : '#004085')};
+  color: ${({ sender }) => (sender === 'user' ? 'var(--msg-user-text)' : colors.white)};
   border-radius: 15px;
   padding: 10px 15px;
-  max-width: 70%; /* Limita a largura do balão */
+  max-width: 70%;
   margin-bottom: 10px;
-  align-self: ${({ sender }) => (sender === 'user' ? 'flex-start' : 'flex-end')}; /* Alinha à esquerda ou direita */
+  align-self: ${({ sender }) => (sender === 'user' ? 'flex-start' : 'flex-end')};
   text-align: ${({ sender }) => (sender === 'user' ? 'left' : 'right')};
   box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 
@@ -90,17 +91,26 @@ export const MessageBubble = styled.div<{ sender: 'user' | 'reception' }>`
     font-size: 12px;
     font-weight: bold;
     margin-bottom: 5px;
-    color: ${({ sender }) => (sender === 'user' ? '#666' : 'rgba(255,255,255,0.8)')};
+    color: ${({ sender }) => (sender === 'user' ? 'var(--msg-user-meta)' : 'rgba(255,255,255,0.8)')};
   }
-  span { /* Conteúdo da mensagem */
+  span { /* Conteúdo da mensagem (o texto principal) */
     font-size: 14px;
-    word-wrap: break-word; /* Quebra palavras longas */
+    word-wrap: break-word;
+  }
+
+  /* ESTILO DO HORÁRIO DA MENSAGEM - CORRIGIDO AQUI PARA BRANCO SÓLIDO */
+  span:last-child { /* Seleciona o último span, que é o do horário */
+    font-size: 10px;
+    margin-left: 5px;
+    display: block;
+    text-align: right;
+    color: ${({ sender }) => (sender === 'user' ? '#444' : colors.white)}; /* MUDADO PARA colors.white */
   }
 `;
 
 export const MessageInputContainer = styled.div`
   display: flex;
-  background-color: ${colors.white};
+  background-color: var(--card-bg);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   padding: 10px;
@@ -116,10 +126,10 @@ export const MessageInput = styled.input`
   font-size: 16px;
   padding: 10px;
   background-color: transparent;
-  color: ${colors.black};
+  color: var(--input-text);
 
   &::placeholder {
-    color: ${colors.textLight};
+    color: var(--input-placeholder);
   }
 `;
 
@@ -147,7 +157,7 @@ export const SettingsIcon = styled.div`
   bottom: 20px;
   right: 20px;
   font-size: 30px;
-  color: ${colors.black};
+  color: var(--card-text);
   cursor: pointer;
   z-index: 10;
   transition: transform 0.2s;
