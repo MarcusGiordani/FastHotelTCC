@@ -173,23 +173,11 @@ http://localhost:5000
 
 ---
 
-# 📷 Telas
-
-Adicione aqui capturas de tela do sistema.
-
-Exemplo:
-
-* Login
-* Dashboard
-* Hóspedes
-* Reservas
-* Pagamentos
-* Analytics
-
----
-
-# 👨‍💻 Autor
+# 👨‍💻 Autores
 
 Marcus Giordani
+Michel Liberali
+Bruno Callegaro
+Guilherme Teixeira
 
 Trabalho de Conclusão de Curso — Engenharia de Software
