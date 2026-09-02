@@ -23,7 +23,14 @@ router.put('/:id', auth, authorize(['admin', 'recepcionista', 'cliente']), userC
 router.delete('/:id', auth, authorize(['admin']), userController.deleteUser); // Apenas admin deleta
 
 // Rota de Login
-router.post('/login', userController.loginUser);
+router.post(
+    '/login',
+    [ // Mesma normalização de e-mail aplicada no cadastro, para o lookup bater com o valor gravado
+        body('email').isEmail().withMessage('Email inválido.').normalizeEmail(),
+        body('senha').notEmpty().withMessage('Senha é obrigatória.')
+    ],
+    userController.loginUser
+);
 
 // Alterar senha (usuário autenticado)
 router.put('/change-password', auth, userController.changePassword);

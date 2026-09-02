@@ -112,6 +112,12 @@ const deleteUser = async (req, res) => {
 
 // Função de Login
 const loginUser = async (req, res) => {
+    // Lidar com erros de validação do express-validator antes de consultar o banco
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
     const { email, senha } = req.body;
 
     try {

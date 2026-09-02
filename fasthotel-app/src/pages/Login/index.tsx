@@ -55,7 +55,7 @@ const Login: React.FC = () => {
       const response = await fetch(`${process.env.REACT_APP_API_URL}/usuarios/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, senha }),
+        body: JSON.stringify({ email: email.trim(), senha }),
       });
 
       const data = await response.json();
@@ -94,8 +94,8 @@ const Login: React.FC = () => {
 
         <Form onSubmit={handleLoginSubmit}>
           <Input
-            placeholder="User"
-            type="text"
+            placeholder="E-mail"
+            type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
