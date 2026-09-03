@@ -1,59 +1,12 @@
 // fasthotel-api/server.js
 
 require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const pool = require('./config/db');
-const userRoutes = require('./routes/userRoutes');
-const roomRoutes = require('./routes/roomRoutes');
-const bookingRoutes = require('./routes/bookingRoutes');
-const guestRoutes = require('./routes/guestRoutes');
-const serviceRoutes = require('./routes/serviceRoutes');
-const consumptionRoutes = require('./routes/consumptionRoutes');
-const paymentRoutes = require('./routes/paymentRoutes');
-const reportRoutes = require('./routes/reportRoutes');
-const chatRoutes = require('./routes/chatRoutes'); // Importação das rotas de chat
-
 const http = require('http'); // <-- NOVO/MODIFICADO PARA CHAT: Importa o módulo HTTP
 const { Server } = require('socket.io'); // <-- NOVO/MODIFICADO PARA CHAT: Importa o Socket.IO Server
+const pool = require('./config/db');
+const app = require('./app'); // Configuração do Express (rotas REST) — ver app.js
 
-const app = express();
 const port = process.env.PORT || 5000;
-
-// Configuração do CORS para Express (HTTP REST API)
-const corsOptions = {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'x-auth-token'],
-};
-app.use(cors(corsOptions));
-app.use(express.json());
-
-// Rotas da API REST
-app.get('/', (req, res) => {
-    res.send('API FastHotel está rodando!');
-});
-
-app.get('/test-db', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT NOW()');
-        res.status(200).json({ message: 'Conexão com o banco de dados bem-sucedida!', time: result.rows[0].now });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ message: 'Erro na conexão com o banco de dados.', error: err.message });
-    }
-});
-
-// Usar as rotas da API REST
-app.use('/api/usuarios', userRoutes);
-app.use('/api/quartos', roomRoutes);
-app.use('/api/reservas', bookingRoutes);
-app.use('/api/hospedes', guestRoutes);
-app.use('/api/servicos', serviceRoutes);
-app.use('/api/consumos', consumptionRoutes);
-app.use('/api/pagamentos', paymentRoutes);
-app.use('/api/relatorios', reportRoutes);
-app.use('/api/chat', chatRoutes); // Usar as rotas de chat
 
 // --- Configuração do Servidor HTTP para Socket.IO --- // <-- ESSAS SÃO AS LINHAS QUE FALTAVAM
 const server = http.createServer(app); // Cria um servidor HTTP a partir do app Express

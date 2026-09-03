@@ -3,6 +3,10 @@
 
 # Environment variables
 .env
+.env.test
+.env.*.local
+!.env.example
+!.env.test.example
 
 # Log files
 npm-debug.log*

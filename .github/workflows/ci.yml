@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    # PostgreSQL de teste fornecido pelo próprio CI (nunca o banco de desenvolvimento).
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: fasthotel_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # Os testes de integração e E2E leem fasthotel-api/.env.test.
+      # Aqui esse arquivo é gerado com credenciais SOMENTE de teste (não são segredos),
+      # coerentes com o service container acima. Nenhuma senha real, nenhum .env real.
+      - name: Preparar fasthotel-api/.env.test (credenciais somente de teste)
+        run: |
+          cat > fasthotel-api/.env.test <<'EOF'
+          PGUSER=postgres
+          PGPASSWORD=postgres
+          PGHOST=localhost
+          PGPORT=5432
+          PGDATABASE=fasthotel_test
+          PGADMIN_DB=postgres
+          JWT_SECRET=ci-tests-only-secret
+          FRONTEND_URL=http://localhost:3000
+          EOF
+
+      - name: Instalar dependências do backend
+        working-directory: fasthotel-api
+        run: npm ci
+
+      - name: Testes unitários (backend)
+        working-directory: fasthotel-api
+        run: npm run test:unit
+
+      - name: Testes de integração (backend + PostgreSQL real)
+        working-directory: fasthotel-api
+        run: npm run test:integration
+
+      - name: Instalar dependências do frontend
+        working-directory: fasthotel-app
+        run: yarn install --frozen-lockfile
+
+      - name: Instalar Chromium do Playwright
+        working-directory: fasthotel-app
+        run: npx playwright install --with-deps chromium
+
+      # A infra de E2E já sobe API (porta 5001) e frontend (porta 3000) sozinha
+      # via fasthotel-app/playwright.config.ts. Aqui só executamos.
+      - name: Testes E2E (Playwright)
+        working-directory: fasthotel-app
+        run: yarn test:e2e
+
+      # CI=false: o react-scripts build trata warnings de lint como erro quando CI=true.
+      # Aqui só queremos validar que o build compila.
+      - name: Build do frontend
+        working-directory: fasthotel-app
+        run: yarn build
+        env:
+          CI: "false"
