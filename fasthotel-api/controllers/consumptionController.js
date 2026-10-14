@@ -1,15 +1,21 @@
 // fasthotel-api/controllers/consumptionController.js
 const pool = require('../config/db');
 
+const isStaff = (req) => req.user.tipo_usuario === 'admin' || req.user.tipo_usuario === 'recepcionista';
+
 // Criar um novo consumo
+// Cliente só pode registrar consumo na PRÓPRIA reserva; equipe em qualquer uma.
 const createConsumption = async (req, res) => {
     const { reserva_id, servico_id, quantidade } = req.body;
 
     try {
-        // Verificar se a reserva existe
-        const bookingExists = await pool.query('SELECT id FROM reservas WHERE id = $1', [reserva_id]);
+        // Verificar se a reserva existe (e a quem pertence, para o vínculo de acesso)
+        const bookingExists = await pool.query('SELECT id, usuario_id FROM reservas WHERE id = $1', [reserva_id]);
         if (bookingExists.rows.length === 0) {
             return res.status(404).json({ message: 'Reserva não encontrada.' });
+        }
+        if (!isStaff(req) && String(bookingExists.rows[0].usuario_id) !== String(req.user.id)) {
+            return res.status(403).json({ message: 'Acesso negado. Você só pode registrar consumo em suas próprias reservas.' });
         }
 
         // Verificar se o serviço existe e obter seu preço atual
@@ -34,6 +40,8 @@ const createConsumption = async (req, res) => {
 };
 
 // Obter todos os consumos (opcionalmente filtrado por reserva_id)
+// Cliente só vê consumos das PRÓPRIAS reservas (lista é auto-restrita, nunca 403:
+// sem reserva_id, simplesmente só retorna o que é dele); equipe vê tudo.
 const getAllConsumptions = async (req, res) => {
     const { reserva_id } = req.query; // Permite filtrar por ID da reserva
     try {
@@ -52,12 +60,22 @@ const getAllConsumptions = async (req, res) => {
                 consumos c
             JOIN
                 servicos s ON c.servico_id = s.id
+            JOIN
+                reservas r ON c.reserva_id = r.id
         `;
+        const conditions = [];
         const params = [];
 
         if (reserva_id) {
-            query += ' WHERE c.reserva_id = $1';
             params.push(reserva_id);
+            conditions.push(`c.reserva_id = $${params.length}`);
+        }
+        if (!isStaff(req)) {
+            params.push(req.user.id);
+            conditions.push(`r.usuario_id = $${params.length}`);
+        }
+        if (conditions.length > 0) {
+            query += ` WHERE ${conditions.join(' AND ')}`;
         }
         query += ' ORDER BY c.data_consumo DESC';
 
@@ -70,6 +88,7 @@ const getAllConsumptions = async (req, res) => {
 };
 
 // Obter consumo por ID
+// Cliente só acessa consumo de reserva própria; equipe acessa qualquer um.
 const getConsumptionById = async (req, res) => {
     const { id } = req.params;
     try {
@@ -83,18 +102,25 @@ const getConsumptionById = async (req, res) => {
                 c.quantidade,
                 c.preco_unitario,
                 (c.quantidade * c.preco_unitario) AS valor_total_item,
-                c.data_consumo
+                c.data_consumo,
+                r.usuario_id AS reserva_usuario_id
             FROM
                 consumos c
             JOIN
                 servicos s ON c.servico_id = s.id
+            JOIN
+                reservas r ON c.reserva_id = r.id
             WHERE c.id = $1`,
             [id]
         );
         if (consumption.rows.length === 0) {
             return res.status(404).json({ message: 'Consumo não encontrado.' });
         }
-        res.status(200).json(consumption.rows[0]);
+        const { reserva_usuario_id, ...consumo } = consumption.rows[0];
+        if (!isStaff(req) && String(reserva_usuario_id) !== String(req.user.id)) {
+            return res.status(403).json({ message: 'Acesso negado. Você só pode consultar consumos de suas próprias reservas.' });
+        }
+        res.status(200).json(consumo);
     } catch (err) {
         console.error('Erro ao buscar consumo por ID:', err.message);
         res.status(500).json({ message: 'Erro no servidor ao buscar consumo.', error: err.message });
@@ -102,11 +128,23 @@ const getConsumptionById = async (req, res) => {
 };
 
 // Atualizar um consumo
+// Cliente só atualiza consumo de reserva própria; equipe atualiza qualquer um.
 const updateConsumption = async (req, res) => {
     const { id } = req.params;
     const { servico_id, quantidade } = req.body; // Não permite mudar reserva_id aqui
 
     try {
+        const dono = await pool.query(
+            `SELECT r.usuario_id FROM consumos c JOIN reservas r ON c.reserva_id = r.id WHERE c.id = $1`,
+            [id]
+        );
+        if (dono.rows.length === 0) {
+            return res.status(404).json({ message: 'Consumo não encontrado para atualização.' });
+        }
+        if (!isStaff(req) && String(dono.rows[0].usuario_id) !== String(req.user.id)) {
+            return res.status(403).json({ message: 'Acesso negado. Você só pode atualizar consumos de suas próprias reservas.' });
+        }
+
         // Opcional: Verificar se o servico_id mudou e obter o novo preco_unitario
         let preco_unitario;
         if (servico_id) {
@@ -150,13 +188,22 @@ const updateConsumption = async (req, res) => {
 };
 
 // Deletar um consumo
+// Cliente só exclui consumo de reserva própria; equipe exclui qualquer um.
 const deleteConsumption = async (req, res) => {
     const { id } = req.params;
     try {
-        const deletedConsumption = await pool.query('DELETE FROM consumos WHERE id = $1 RETURNING id', [id]);
-        if (deletedConsumption.rows.length === 0) {
+        const dono = await pool.query(
+            `SELECT r.usuario_id FROM consumos c JOIN reservas r ON c.reserva_id = r.id WHERE c.id = $1`,
+            [id]
+        );
+        if (dono.rows.length === 0) {
             return res.status(404).json({ message: 'Consumo não encontrado para exclusão.' });
         }
+        if (!isStaff(req) && String(dono.rows[0].usuario_id) !== String(req.user.id)) {
+            return res.status(403).json({ message: 'Acesso negado. Você só pode excluir consumos de suas próprias reservas.' });
+        }
+
+        const deletedConsumption = await pool.query('DELETE FROM consumos WHERE id = $1 RETURNING id', [id]);
         res.status(200).json({ message: 'Consumo excluído com sucesso!', id: id });
     } catch (err) {
         console.error('Erro ao deletar consumo:', err.message);

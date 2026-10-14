@@ -11,15 +11,12 @@ const inputStyle: React.CSSProperties = {
 };
 const labelStyle: React.CSSProperties = { fontSize: '13px', fontWeight: 600, color: '#374151' };
 
-type Role = 'admin' | 'recepcionista' | 'cliente';
-
 const UserRegistration: React.FC = () => {
   const navigate = useNavigate();
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [confirmar, setConfirmar] = useState('');
-  const [tipo, setTipo] = useState<Role>('recepcionista');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -38,12 +35,12 @@ const UserRegistration: React.FC = () => {
       const res = await fetch(`${process.env.REACT_APP_API_URL}/usuarios`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome, email, senha, tipo_usuario: tipo }),
+        body: JSON.stringify({ nome, email, senha }),
       });
       const data = await res.json();
       if (res.ok) {
         setSuccess(`Usuário "${nome}" registrado com sucesso!`);
-        setNome(''); setEmail(''); setSenha(''); setConfirmar(''); setTipo('recepcionista');
+        setNome(''); setEmail(''); setSenha(''); setConfirmar('');
       } else {
         const msg = data.errors?.map((e: any) => e.msg).join(' ') || data.message || 'Erro ao registrar.';
         setError(msg);
@@ -78,16 +75,15 @@ const UserRegistration: React.FC = () => {
           </div>
 
           <div style={field}>
-            <label style={labelStyle}>Tipo de acesso *</label>
-            <select
-              style={{ ...inputStyle, cursor: 'pointer', appearance: 'none', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%236b7280' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center' }}
-              value={tipo}
-              onChange={e => setTipo(e.target.value as Role)}
-            >
-              <option value="recepcionista">Recepcionista</option>
-              <option value="admin">Administrador</option>
-              <option value="cliente">Cliente / Hóspede</option>
-            </select>
+            <label style={labelStyle}>Tipo de acesso</label>
+            <p style={{ ...inputStyle, margin: 0, background: '#f3f4f6', color: '#374151', border: '1.5px solid #e5e7eb' }}>
+              Cliente / Hóspede
+            </p>
+            <span style={{ fontSize: '12px', color: '#6b7280' }}>
+              O cadastro público sempre cria uma conta cliente. Contas de equipe
+              (administrador ou recepcionista) só podem ser criadas por um
+              administrador já autenticado.
+            </span>
           </div>
 
           <div style={field}>

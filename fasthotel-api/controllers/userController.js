@@ -4,41 +4,73 @@ const bcrypt = require('bcryptjs'); // Para hash de senhas
 const jwt = require('jsonwebtoken'); // Importa a biblioteca jsonwebtoken
 const { validationResult } = require('express-validator'); // <-- NOVO: Importar validationResult
 
-// Criar um novo usuário
+// Helper interno: valida duplicidade de e-mail, gera o hash da senha e insere o usuário.
+// Usado por createUser (cadastro público — sempre "cliente") e createStaffUser (admin cria equipe).
+async function criarUsuario({ nome, email, senha, tipo_usuario }) {
+    const existingUser = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email]);
+    if (existingUser.rows.length > 0) {
+        return { erro: 'Email já cadastrado.' };
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const senhaHash = await bcrypt.hash(senha, salt);
+
+    const novoUsuario = await pool.query(
+        'INSERT INTO usuarios (nome, email, senha, tipo_usuario) VALUES ($1, $2, $3, $4) RETURNING id, nome, email, tipo_usuario, data_cadastro',
+        [nome, email, senhaHash, tipo_usuario]
+    );
+
+    return { usuario: novoUsuario.rows[0] };
+}
+
+// Criar um novo usuário (cadastro público — SEMPRE como "cliente", independente do que for enviado)
 const createUser = async (req, res) => {
-    // --- NOVO: Lidar com erros de validação do express-validator ---
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
-    // -----------------------------------------------------------
 
-    const { nome, email, senha, tipo_usuario } = req.body;
+    const { nome, email, senha } = req.body;
 
     try {
-        // 1. Verificar se o usuário já existe (após a validação de formato)
-        const existingUser = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email]);
-        if (existingUser.rows.length > 0) {
-            return res.status(400).json({ message: 'Email já cadastrado.' });
+        const resultado = await criarUsuario({ nome, email, senha, tipo_usuario: 'cliente' });
+        if (resultado.erro) {
+            return res.status(400).json({ message: resultado.erro });
         }
-
-        // 2. Hash da senha
-        const salt = await bcrypt.genSalt(10);
-        const senhaHash = await bcrypt.hash(senha, salt);
-
-        // 3. Inserir o novo usuário no banco de dados
-        const newUser = await pool.query(
-            'INSERT INTO usuarios (nome, email, senha, tipo_usuario) VALUES ($1, $2, $3, $4) RETURNING id, nome, email, tipo_usuario, data_cadastro',
-            [nome, email, senhaHash, tipo_usuario || 'cliente']
-        );
 
         res.status(201).json({
             message: 'Usuário criado com sucesso!',
-            user: newUser.rows[0]
+            user: resultado.usuario
         });
 
     } catch (err) {
         console.error('Erro ao criar usuário:', err.message);
+        res.status(500).json({ message: 'Erro no servidor ao criar usuário.', error: err.message });
+    }
+};
+
+// Criar um usuário de equipe (admin ou recepcionista) — rota protegida, só admin autenticado
+const createStaffUser = async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { nome, email, senha, tipo_usuario } = req.body;
+
+    try {
+        const resultado = await criarUsuario({ nome, email, senha, tipo_usuario });
+        if (resultado.erro) {
+            return res.status(400).json({ message: resultado.erro });
+        }
+
+        res.status(201).json({
+            message: 'Usuário criado com sucesso!',
+            user: resultado.usuario
+        });
+
+    } catch (err) {
+        console.error('Erro ao criar usuário de equipe:', err.message);
         res.status(500).json({ message: 'Erro no servidor ao criar usuário.', error: err.message });
     }
 };
@@ -57,6 +89,13 @@ const getAllUsers = async (req, res) => {
 // Obter um usuário por ID
 const getUserById = async (req, res) => {
     const { id } = req.params;
+
+    const isSelf = String(req.user.id) === String(id);
+    const isStaff = req.user.tipo_usuario === 'admin' || req.user.tipo_usuario === 'recepcionista';
+    if (!isSelf && !isStaff) {
+        return res.status(403).json({ message: 'Acesso negado. Você só pode consultar o próprio usuário.' });
+    }
+
     try {
         const user = await pool.query('SELECT id, nome, email, tipo_usuario, data_cadastro FROM usuarios WHERE id = $1', [id]);
         if (user.rows.length === 0) {
@@ -69,15 +108,25 @@ const getUserById = async (req, res) => {
     }
 };
 
-// Atualizar um usuário
+// Atualizar um usuário (o próprio perfil; ou qualquer usuário, se quem chama for admin)
 const updateUser = async (req, res) => {
     const { id } = req.params;
     const { nome, email, tipo_usuario } = req.body;
 
+    const isSelf = String(req.user.id) === String(id);
+    const isAdmin = req.user.tipo_usuario === 'admin';
+
+    if (!isSelf && !isAdmin) {
+        return res.status(403).json({ message: 'Acesso negado. Você só pode atualizar o próprio perfil.' });
+    }
+    if (tipo_usuario !== undefined && !isAdmin) {
+        return res.status(403).json({ message: 'Acesso negado. Apenas administradores podem alterar o tipo de usuário.' });
+    }
+
     try {
         const updatedUser = await pool.query(
-            'UPDATE usuarios SET nome = $1, email = $2, tipo_usuario = $3 WHERE id = $4 RETURNING id, nome, email, tipo_usuario',
-            [nome, email, tipo_usuario, id]
+            'UPDATE usuarios SET nome = COALESCE($1, nome), email = COALESCE($2, email), tipo_usuario = COALESCE($3, tipo_usuario) WHERE id = $4 RETURNING id, nome, email, tipo_usuario',
+            [nome, email, isAdmin ? tipo_usuario : null, id]
         );
 
         if (updatedUser.rows.length === 0) {
@@ -205,6 +254,7 @@ const changePassword = async (req, res) => {
 
 module.exports = {
     createUser,
+    createStaffUser,
     getAllUsers,
     getUserById,
     updateUser,

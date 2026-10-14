@@ -6,15 +6,30 @@ const authorize = require('../middleware/authorize'); // Certifique-se que está
 const { body, validationResult } = require('express-validator'); // <-- NOVO: Importar body e validationResult
 
 // Rotas para o CRUD de Usuários
+
+// Cadastro público — sempre cria "cliente" (controller ignora qualquer tipo_usuario enviado)
 router.post(
     '/',
-    [ // <-- NOVO: Array de middlewares de validação
+    [
+        body('nome').trim().notEmpty().withMessage('Nome é obrigatório.').isLength({ min: 3 }).withMessage('Nome deve ter pelo menos 3 caracteres.'),
+        body('email').isEmail().withMessage('Email inválido.').normalizeEmail(),
+        body('senha').isLength({ min: 6 }).withMessage('Senha deve ter pelo menos 6 caracteres.')
+    ],
+    userController.createUser
+);
+
+// Criação de conta de equipe (admin/recepcionista) — somente administrador autenticado
+router.post(
+    '/staff',
+    auth,
+    authorize(['admin']),
+    [
         body('nome').trim().notEmpty().withMessage('Nome é obrigatório.').isLength({ min: 3 }).withMessage('Nome deve ter pelo menos 3 caracteres.'),
         body('email').isEmail().withMessage('Email inválido.').normalizeEmail(),
         body('senha').isLength({ min: 6 }).withMessage('Senha deve ter pelo menos 6 caracteres.'),
-        body('tipo_usuario').optional().isIn(['admin', 'recepcionista', 'cliente']).withMessage('Tipo de usuário inválido.')
+        body('tipo_usuario').isIn(['admin', 'recepcionista', 'cliente']).withMessage('Tipo de usuário inválido.')
     ],
-    userController.createUser // <-- O controlador será chamado DEPOIS da validação
+    userController.createStaffUser
 );
 
 router.get('/', auth, authorize(['admin']), userController.getAllUsers); // Apenas admin lista todos

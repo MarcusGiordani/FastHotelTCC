@@ -4,7 +4,9 @@ const router = express.Router();
 const consumptionController = require('../controllers/consumptionController');
 const auth = require('../middleware/authMiddleware'); // Middleware de autenticação
 
-// Rotas para o CRUD de Consumos (todas protegidas)
+// Todas as rotas exigem apenas autenticação — o vínculo com a reserva (cliente só
+// acessa consumo da PRÓPRIA reserva; equipe acessa qualquer uma) é verificado
+// dentro do controller, pois depende de qual reserva cada consumo pertence.
 router.post('/', auth, consumptionController.createConsumption);
 router.get('/', auth, consumptionController.getAllConsumptions);
 router.get('/:id', auth, consumptionController.getConsumptionById);

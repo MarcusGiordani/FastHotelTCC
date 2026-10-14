@@ -18,9 +18,11 @@ jest.mock('../../config/db', () => ({
   query: jest.fn(),
 }));
 
-// loginUser usa somente bcrypt.compare(...).
+// loginUser usa bcrypt.compare(...); createUser/createStaffUser usam genSalt(...)+hash(...).
 jest.mock('bcryptjs', () => ({
   compare: jest.fn(),
+  genSalt: jest.fn(),
+  hash: jest.fn(),
 }));
 
 // loginUser usa somente jwt.sign(payload, secret, options, callback).
@@ -37,7 +39,7 @@ const pool = require('../../config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
-const { loginUser } = require('../../controllers/userController');
+const { loginUser, createUser, createStaffUser, updateUser, getUserById } = require('../../controllers/userController');
 
 // res fake com status()/json() encadeáveis, como no Express.
 const criarRes = () => {
@@ -188,5 +190,224 @@ describe('loginUser — testes unitários isolados', () => {
     expect(pool.query).not.toHaveBeenCalled();
     expect(bcrypt.compare).not.toHaveBeenCalled();
     expect(jwt.sign).not.toHaveBeenCalled();
+  });
+});
+
+// =====================================================================
+// F01 — createUser (cadastro público) deve SEMPRE criar como 'cliente',
+// ignorando qualquer tipo_usuario enviado no corpo da requisição.
+// createStaffUser (rota protegida /usuarios/staff) deve respeitar o
+// tipo_usuario enviado — a restrição de QUEM pode chamá-la é do
+// middleware authorize(['admin']), validado nos testes de integração.
+// =====================================================================
+describe('createUser / createStaffUser — correção F01', () => {
+  let req;
+  let res;
+  let consoleErrorSpy;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    res = criarRes();
+    validationResult.mockReturnValue({ isEmpty: () => true, array: () => [] });
+    bcrypt.genSalt.mockResolvedValue('salt-fake');
+    bcrypt.hash.mockResolvedValue('hash-fake');
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+  });
+
+  test('createUser ignora tipo_usuario="admin" enviado por um visitante e grava "cliente"', async () => {
+    req = {
+      body: { nome: 'Fulano', email: 'fulano@teste.com', senha: 'senha123', tipo_usuario: 'admin' },
+    };
+    pool.query
+      .mockResolvedValueOnce({ rows: [] }) // SELECT: e-mail ainda não existe
+      .mockResolvedValueOnce({
+        rows: [{ id: 10, nome: 'Fulano', email: 'fulano@teste.com', tipo_usuario: 'cliente', data_cadastro: '2026-01-01' }],
+      }); // INSERT ... RETURNING
+
+    await createUser(req, res);
+
+    const [, insertParams] = pool.query.mock.calls[1];
+    expect(insertParams).toEqual(['Fulano', 'fulano@teste.com', 'hash-fake', 'cliente']);
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'Usuário criado com sucesso!',
+      user: expect.objectContaining({ tipo_usuario: 'cliente' }),
+    });
+  });
+
+  test('createUser: e-mail já cadastrado → 400, sem tentar inserir', async () => {
+    req = { body: { nome: 'Fulano', email: 'fulano@teste.com', senha: 'senha123' } };
+    pool.query.mockResolvedValueOnce({ rows: [{ id: 1 }] });
+
+    await createUser(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ message: 'Email já cadastrado.' });
+    expect(pool.query).toHaveBeenCalledTimes(1);
+  });
+
+  test('createUser: erro de validação → 400, banco não é consultado', async () => {
+    validationResult.mockReturnValue({
+      isEmpty: () => false,
+      array: () => [{ msg: 'Email inválido.' }],
+    });
+    req = { body: { nome: 'x', email: 'invalido', senha: '123' } };
+
+    await createUser(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(pool.query).not.toHaveBeenCalled();
+  });
+
+  test('createStaffUser grava o tipo_usuario enviado (rota já é protegida por authorize([\'admin\']))', async () => {
+    req = {
+      body: { nome: 'Equipe', email: 'equipe@teste.com', senha: 'senha123', tipo_usuario: 'recepcionista' },
+    };
+    pool.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [{ id: 11, nome: 'Equipe', email: 'equipe@teste.com', tipo_usuario: 'recepcionista', data_cadastro: '2026-01-01' }],
+      });
+
+    await createStaffUser(req, res);
+
+    const [, insertParams] = pool.query.mock.calls[1];
+    expect(insertParams).toEqual(['Equipe', 'equipe@teste.com', 'hash-fake', 'recepcionista']);
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'Usuário criado com sucesso!',
+      user: expect.objectContaining({ tipo_usuario: 'recepcionista' }),
+    });
+  });
+});
+
+// =====================================================================
+// F02 — updateUser não pode mais permitir que um usuário altere dados de
+// outra conta nem o próprio tipo_usuario, a menos que quem chama já seja
+// admin. Edição do próprio nome/e-mail continua funcionando (regressão).
+// =====================================================================
+describe('updateUser — correção F02', () => {
+  let req;
+  let res;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    res = criarRes();
+  });
+
+  test('cliente tentando alterar o próprio tipo_usuario → 403, UPDATE não executado', async () => {
+    req = { params: { id: '5' }, body: { tipo_usuario: 'admin' }, user: { id: 5, tipo_usuario: 'cliente' } };
+
+    await updateUser(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(pool.query).not.toHaveBeenCalled();
+  });
+
+  test('cliente tentando alterar dados de outro usuário → 403, UPDATE não executado', async () => {
+    req = { params: { id: '7' }, body: { nome: 'Novo Nome' }, user: { id: 5, tipo_usuario: 'cliente' } };
+
+    await updateUser(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(pool.query).not.toHaveBeenCalled();
+  });
+
+  test('cliente alterando o próprio nome/e-mail (sem tipo_usuario) continua permitido', async () => {
+    req = {
+      params: { id: '5' },
+      body: { nome: 'Nome Novo', email: 'novo@teste.com' },
+      user: { id: 5, tipo_usuario: 'cliente' },
+    };
+    pool.query.mockResolvedValueOnce({
+      rows: [{ id: 5, nome: 'Nome Novo', email: 'novo@teste.com', tipo_usuario: 'cliente' }],
+    });
+
+    await updateUser(req, res);
+
+    expect(pool.query).toHaveBeenCalledWith(
+      'UPDATE usuarios SET nome = COALESCE($1, nome), email = COALESCE($2, email), tipo_usuario = COALESCE($3, tipo_usuario) WHERE id = $4 RETURNING id, nome, email, tipo_usuario',
+      ['Nome Novo', 'novo@teste.com', null, '5'],
+    );
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  test('admin alterando tipo_usuario de outro usuário → permitido, 200', async () => {
+    req = {
+      params: { id: '9' },
+      body: { tipo_usuario: 'recepcionista' },
+      user: { id: 1, tipo_usuario: 'admin' },
+    };
+    pool.query.mockResolvedValueOnce({
+      rows: [{ id: 9, nome: 'X', email: 'x@x.com', tipo_usuario: 'recepcionista' }],
+    });
+
+    await updateUser(req, res);
+
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.any(String),
+      [undefined, undefined, 'recepcionista', '9'],
+    );
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  test('usuário não encontrado → 404', async () => {
+    req = { params: { id: '5' }, body: { nome: 'X' }, user: { id: 5, tipo_usuario: 'cliente' } };
+    pool.query.mockResolvedValueOnce({ rows: [] });
+
+    await updateUser(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+  });
+});
+
+describe('getUserById — correção F03', () => {
+  let req;
+  let res;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    res = criarRes();
+  });
+
+  test('cliente consultando o PRÓPRIO id → 200, consulta o banco', async () => {
+    req = { params: { id: '5' }, user: { id: 5, tipo_usuario: 'cliente' } };
+    pool.query.mockResolvedValueOnce({ rows: [{ id: 5, nome: 'X', email: 'x@x.com', tipo_usuario: 'cliente' }] });
+
+    await getUserById(req, res);
+
+    expect(pool.query).toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  test('cliente consultando id de OUTRO usuário → 403, banco não é consultado', async () => {
+    req = { params: { id: '7' }, user: { id: 5, tipo_usuario: 'cliente' } };
+
+    await getUserById(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(pool.query).not.toHaveBeenCalled();
+  });
+
+  test('admin consultando qualquer id → 200', async () => {
+    req = { params: { id: '7' }, user: { id: 1, tipo_usuario: 'admin' } };
+    pool.query.mockResolvedValueOnce({ rows: [{ id: 7, nome: 'Y', email: 'y@y.com', tipo_usuario: 'cliente' }] });
+
+    await getUserById(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  test('recepcionista consultando qualquer id → 200', async () => {
+    req = { params: { id: '7' }, user: { id: 2, tipo_usuario: 'recepcionista' } };
+    pool.query.mockResolvedValueOnce({ rows: [{ id: 7, nome: 'Y', email: 'y@y.com', tipo_usuario: 'cliente' }] });
+
+    await getUserById(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
   });
 });
