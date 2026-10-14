@@ -4,6 +4,35 @@ const bcrypt = require('bcryptjs'); // Para hash de senhas
 const jwt = require('jsonwebtoken'); // Importa a biblioteca jsonwebtoken
 const { validationResult } = require('express-validator'); // Importar validationResult
 
+// CPF é armazenado só com os 11 dígitos (sem pontuação) — formato canônico único,
+// para que "123.456.789-09" e "12345678909" sejam sempre a mesma linha na checagem
+// de duplicidade. A máscara de exibição (000.000.000-00) é responsabilidade do
+// frontend; aqui só validamos os dígitos verificadores (algoritmo padrão do CPF).
+function normalizarCpf(cpfBruto) {
+    return String(cpfBruto).replace(/\D/g, '');
+}
+
+function cpfValido(cpfDigitos) {
+    if (!/^\d{11}$/.test(cpfDigitos)) return false;
+    if (/^(\d)\1{10}$/.test(cpfDigitos)) return false; // ex: 00000000000, 11111111111 (nunca válidos)
+
+    const calcularDigito = (base) => {
+        let soma = 0;
+        let peso = base.length + 1;
+        for (const digito of base) {
+            soma += Number(digito) * peso;
+            peso -= 1;
+        }
+        const resto = (soma * 10) % 11;
+        return resto === 10 ? 0 : resto;
+    };
+
+    const base9 = cpfDigitos.slice(0, 9);
+    const digito1 = calcularDigito(base9);
+    const digito2 = calcularDigito(base9 + digito1);
+    return cpfDigitos === base9 + String(digito1) + String(digito2);
+}
+
 // Criar um novo hóspede
 const createGuest = async (req, res) => {
     const errors = validationResult(req);
@@ -12,12 +41,17 @@ const createGuest = async (req, res) => {
     }
 
     const {
-        nome, sobrenome, cpf, rg, data_nascimento, email,
+        nome, sobrenome, rg, data_nascimento, email,
         telefone, endereco, numero, bairro, cep, cidade, estado,
     } = req.body;
+    let { cpf } = req.body;
 
     try {
         if (cpf) {
+            cpf = normalizarCpf(cpf);
+            if (!cpfValido(cpf)) {
+                return res.status(400).json({ message: 'CPF inválido.' });
+            }
             const existingGuest = await pool.query('SELECT id FROM hospedes WHERE cpf = $1', [cpf]);
             if (existingGuest.rows.length > 0) {
                 return res.status(400).json({ message: 'CPF já cadastrado para outro hóspede.' });
@@ -92,10 +126,26 @@ const getAllGuests = async (req, res) => {
     }
 };
 
+// Um hóspede não tem dono direto — o vínculo é através de reservas.hospede_principal_id.
+// Cliente só pode acessar um hóspede vinculado a alguma reserva feita por ele mesmo.
+const podeAcessarHospede = async (hospedeId, req) => {
+    if (req.user.tipo_usuario === 'admin' || req.user.tipo_usuario === 'recepcionista') {
+        return true;
+    }
+    const vinculo = await pool.query(
+        'SELECT 1 FROM reservas WHERE hospede_principal_id = $1 AND usuario_id = $2 LIMIT 1',
+        [hospedeId, req.user.id]
+    );
+    return vinculo.rows.length > 0;
+};
+
 // Obter hóspede por ID
 const getGuestById = async (req, res) => {
     const { id } = req.params;
     try {
+        if (!(await podeAcessarHospede(id, req))) {
+            return res.status(403).json({ message: 'Acesso negado. Você só pode consultar hóspedes de suas próprias reservas.' });
+        }
         const guest = await pool.query('SELECT * FROM hospedes WHERE id = $1', [id]);
         if (guest.rows.length === 0) {
             return res.status(404).json({ message: 'Hóspede não encontrado.' });
@@ -111,15 +161,44 @@ const getGuestById = async (req, res) => {
 const updateGuest = async (req, res) => {
     const { id } = req.params;
     const {
-        nome, sobrenome, cpf, rg, data_nascimento, email,
+        nome, sobrenome, rg, data_nascimento, email,
         telefone, endereco, numero, bairro, cep, cidade, estado
     } = req.body;
+    let { cpf } = req.body;
 
     try {
+        if (!(await podeAcessarHospede(id, req))) {
+            return res.status(403).json({ message: 'Acesso negado. Você só pode atualizar hóspedes de suas próprias reservas.' });
+        }
+
+        if (cpf) {
+            cpf = normalizarCpf(cpf);
+            if (!cpfValido(cpf)) {
+                return res.status(400).json({ message: 'CPF inválido.' });
+            }
+            const existingGuest = await pool.query('SELECT id FROM hospedes WHERE cpf = $1 AND id != $2', [cpf, id]);
+            if (existingGuest.rows.length > 0) {
+                return res.status(400).json({ message: 'CPF já cadastrado para outro hóspede.' });
+            }
+        }
+
+        // COALESCE preserva campos não enviados no corpo (ex: editar só o CPF não
+        // pode apagar nome/demais dados — nome é NOT NULL e isso quebraria a edição).
         const updatedGuest = await pool.query(
             `UPDATE hospedes SET
-                nome = $1, sobrenome = $2, cpf = $3, rg = $4, data_nascimento = $5, email = $6,
-                telefone = $7, endereco = $8, numero = $9, bairro = $10, cep = $11, cidade = $12, estado = $13
+                nome = COALESCE($1, nome),
+                sobrenome = COALESCE($2, sobrenome),
+                cpf = COALESCE($3, cpf),
+                rg = COALESCE($4, rg),
+                data_nascimento = COALESCE($5, data_nascimento),
+                email = COALESCE($6, email),
+                telefone = COALESCE($7, telefone),
+                endereco = COALESCE($8, endereco),
+                numero = COALESCE($9, numero),
+                bairro = COALESCE($10, bairro),
+                cep = COALESCE($11, cep),
+                cidade = COALESCE($12, cidade),
+                estado = COALESCE($13, estado)
              WHERE id = $14
              RETURNING *`,
             [nome, sobrenome, cpf, rg, data_nascimento, email,

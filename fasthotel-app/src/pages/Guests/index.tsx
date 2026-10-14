@@ -3,6 +3,7 @@ import SideMenu from '../../components/SideMenu';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEdit, faClipboardList, faCreditCard, faTrashAlt } from '@fortawesome/free-solid-svg-icons'; // <-- Adicionado faTrashAlt
 import { useNavigate } from 'react-router-dom';
+import { mascararCpf } from '../../utils/cpf';
 
 import {
   GuestsContainer,
@@ -213,7 +214,7 @@ const Guests: React.FC = () => {
               {guests.map((guest) => (
                 <TableRow key={guest.id}>
                   <TableCell>{guest.nome} {guest.sobrenome}</TableCell>
-                  <TableCell>{guest.cpf}</TableCell>
+                  <TableCell>{guest.cpf ? mascararCpf(guest.cpf) : '—'}</TableCell>
                   <TableCell>N/A</TableCell>
                   <TableActionCell onClick={() => handleEdit(guest.id)}>
                     <FontAwesomeIcon icon={faEdit} />

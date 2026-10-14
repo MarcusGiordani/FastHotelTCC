@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import SideMenu from '../../components/SideMenu';
 import Input from '../../components/Input';
@@ -6,6 +6,7 @@ import Button from '../../components/Button'; // <-- CAMINHO CORRIGIDO AQUI: "..
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faRedo } from '@fortawesome/free-solid-svg-icons';
 import DatePickerField from '../../components/DatePickerField';
+import { mascararCpf, cpfValido } from '../../utils/cpf';
 
 import {
   RegistrationContainer,
@@ -65,7 +66,16 @@ const GuestRegistration: React.FC = () => {
     id: number;
     numero: string;
     tipo: string;
+    tipo_id: number | null;
+    capacidade: number;
+    preco_por_noite: string | number;
     status: string;
+  }
+
+  interface RoomType {
+    id: number;
+    nome: string;
+    ativo: boolean;
   }
 
   const [isMenuOpen, setIsMenuOpen] = useState(true);
@@ -103,6 +113,8 @@ const GuestRegistration: React.FC = () => {
   // --- NOVOS ESTADOS PARA A LISTA DE QUARTOS E CARREGAMENTO ---
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
   const [roomsLoading, setRoomsLoading] = useState(false);
+  const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
+  const [roomTypesLoading, setRoomTypesLoading] = useState(false);
 
   const getUserInfo = (): UserInfo | null => {
     const userInfoString = localStorage.getItem('user_info');
@@ -142,6 +154,33 @@ const GuestRegistration: React.FC = () => {
     }
   }, [id]);
 
+  // --- EFEITO PARA BUSCAR OS TIPOS DE APARTAMENTO CADASTRADOS (ATIVOS) ---
+  useEffect(() => {
+    const fetchRoomTypes = async () => {
+      setRoomTypesLoading(true);
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/tipos-quarto?ativo=true`, {
+          headers: { 'x-auth-token': token || '' },
+        });
+        if (!response.ok) throw new Error('Falha ao buscar tipos de apartamento.');
+        const data: RoomType[] = await response.json();
+        setRoomTypes(data);
+      } catch (err) {
+        if (err instanceof Error) {
+          console.error('Erro ao buscar tipos de apartamento:', err);
+          setError('Não foi possível carregar os tipos de apartamento: ' + err.message);
+        }
+      } finally {
+        setRoomTypesLoading(false);
+      }
+    };
+
+    if (!id) {
+      fetchRoomTypes();
+    }
+  }, [id]);
+
   // Efeito para carregar dados do hóspede em modo de edição
   useEffect(() => {
     if (id) {
@@ -169,7 +208,7 @@ const GuestRegistration: React.FC = () => {
               ...prevFormData,
               nome: guestData.nome,
               sobrenome: guestData.sobrenome || '',
-              cpf: guestData.cpf,
+              cpf: mascararCpf(guestData.cpf || ''),
               rg: guestData.rg || '',
               data_nascimento: guestData.data_nascimento ? new Date(guestData.data_nascimento).toISOString().split('T')[0] : '',
               email: guestData.email || '',
@@ -208,7 +247,7 @@ const GuestRegistration: React.FC = () => {
         break;
       case 'cpf':
         if (!value.toString().trim()) return 'CPF é obrigatório.';
-        if (!/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(value.toString().trim())) return 'CPF inválido (formato: 000.000.000-00).';
+        if (!cpfValido(value.toString())) return 'CPF inválido.';
         break;
       case 'data_nascimento': {
         if (!value) return 'Data de nascimento é obrigatória.';
@@ -254,6 +293,39 @@ const GuestRegistration: React.FC = () => {
     setMessage('');
     setError('');
   };
+
+  // Troca de tipo também limpa o apartamento escolhido — a lista de apartamentos
+  // é sempre filtrada pelo tipo atual, então uma seleção antiga pode não existir
+  // mais nessa lista (garante que o tipo exibido sempre bate com o quarto reservado).
+  const handleTipoQuartoChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const { value } = e.target;
+    setFormData((prev) => ({ ...prev, tipoQuarto: value, apartamento: '' }));
+    setFormErrors((prev) => ({
+      ...prev,
+      tipoQuarto: validateField('tipoQuarto', value),
+      apartamento: '',
+    }));
+    setMessage('');
+    setError('');
+  };
+
+  // Aplica a máscara 000.000.000-00 a cada digitação — funciona igual para
+  // texto colado (o evento de onChange já chega com o valor colado completo).
+  const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const mascarado = mascararCpf(e.target.value);
+    setFormData((prev) => ({ ...prev, cpf: mascarado }));
+    setFormErrors((prev) => ({ ...prev, cpf: validateField('cpf', mascarado) }));
+    setMessage('');
+    setError('');
+  };
+
+  // Só mostra, no select de apartamento, os quartos do tipo escolhido — elimina
+  // o antigo campo "Tipo" decorativo: agora o tipo selecionado sempre corresponde
+  // ao quarto que será realmente reservado.
+  const quartosDoTipoSelecionado = useMemo(
+    () => availableRooms.filter((room) => !formData.tipoQuarto || String(room.tipo_id) === formData.tipoQuarto),
+    [availableRooms, formData.tipoQuarto],
+  );
 
   const handleNumberChange = (field: 'quantidade_criancas' | 'quantidade_adultos', type: 'increment' | 'decrement') => {
     setFormData((prev) => {
@@ -488,7 +560,7 @@ const GuestRegistration: React.FC = () => {
             <Input label="Nome *" name="nome" value={formData.nome} onChange={handleChange} required />
             {formErrors.nome && <p style={{ color: 'red', fontSize: '12px', gridColumn: 'span 1' }}>{formErrors.nome}</p>}
 
-            <Input label="CPF *" name="cpf" value={formData.cpf} onChange={handleChange} required placeholder="000.000.000-00" />
+            <Input label="CPF *" name="cpf" value={formData.cpf} onChange={handleCpfChange} required placeholder="000.000.000-00" maxLength={14} inputMode="numeric" />
             {formErrors.cpf && <p style={{ color: 'red', fontSize: '12px', gridColumn: 'span 1' }}>{formErrors.cpf}</p>}
 
             <DatePickerField
@@ -561,6 +633,31 @@ const GuestRegistration: React.FC = () => {
           <SectionTitle>Dados da reserva</SectionTitle>
           <FormGrid>
             <SelectInput>
+              <label>Tipo *</label>
+              <select
+                name="tipoQuarto"
+                value={formData.tipoQuarto}
+                onChange={handleTipoQuartoChange}
+                required={!isEditMode}
+                disabled={isEditMode || roomTypesLoading}
+              >
+                <option value="">
+                  {roomTypesLoading ? 'Carregando...' : 'Selecione o tipo'}
+                </option>
+                {roomTypes.map((tipo) => (
+                  <option key={tipo.id} value={tipo.id}>
+                    {tipo.nome}
+                  </option>
+                ))}
+              </select>
+              {!roomTypesLoading && roomTypes.length === 0 && (
+                <p style={{ color: '#b45309', fontSize: '12px' }}>
+                  Nenhum tipo de apartamento cadastrado. Peça a um administrador para cadastrar em "Apartamentos".
+                </p>
+              )}
+            </SelectInput>
+            {formErrors.tipoQuarto && <p style={{ color: 'red', fontSize: '12px', gridColumn: 'span 1' }}>{formErrors.tipoQuarto}</p>}
+            <SelectInput>
               <label>Apartamento *</label>
               <div>
                 <select
@@ -568,32 +665,31 @@ const GuestRegistration: React.FC = () => {
                   value={formData.apartamento}
                   onChange={handleChange}
                   required={!isEditMode}
-                  disabled={isEditMode || roomsLoading}
+                  disabled={isEditMode || roomsLoading || !formData.tipoQuarto}
                 >
                   <option value="">
-                    {roomsLoading ? 'Carregando...' : 'Selecione o apartamento'}
+                    {roomsLoading
+                      ? 'Carregando...'
+                      : !formData.tipoQuarto
+                      ? 'Selecione um tipo primeiro'
+                      : 'Selecione o apartamento'}
                   </option>
-                  {/* Mapeia a lista de quartos buscada da API */}
-                  {availableRooms.map((room) => (
+                  {/* Mapeia a lista de quartos do tipo escolhido, buscada da API */}
+                  {quartosDoTipoSelecionado.map((room) => (
                     <option key={room.id} value={room.id}>
-                      {room.numero}
+                      {`${room.numero} — ${room.capacidade} hóspede(s) — R$ ${Number(room.preco_por_noite).toFixed(2)}/noite`}
                     </option>
                   ))}
                 </select>
                 <FontAwesomeIcon icon={faRedo} style={{ cursor: 'pointer' }} />
               </div>
+              {!roomsLoading && formData.tipoQuarto && quartosDoTipoSelecionado.length === 0 && (
+                <p style={{ color: '#b45309', fontSize: '12px' }}>
+                  Nenhum apartamento disponível para esse tipo no momento.
+                </p>
+              )}
             </SelectInput>
             {formErrors.apartamento && <p style={{ color: 'red', fontSize: '12px', gridColumn: 'span 1' }}>{formErrors.apartamento}</p>}
-            <SelectInput>
-              <label>Tipo *</label>
-              <select name="tipoQuarto" value={formData.tipoQuarto} onChange={handleChange} required={!isEditMode}>
-                <option value="">Escolha</option>
-                <option value="Standard">Standard</option>
-                <option value="Luxo">Luxo</option>
-                <option value="Suite">Suite</option>
-              </select>
-            </SelectInput>
-            {formErrors.tipoQuarto && <p style={{ color: 'red', fontSize: '12px', gridColumn: 'span 1' }}>{formErrors.tipoQuarto}</p>}
 
             <DatePickerField
               label={isEditMode ? 'Data de Entrada' : 'Data de Entrada *'}
