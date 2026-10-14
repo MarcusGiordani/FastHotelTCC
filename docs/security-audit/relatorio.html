@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>Relatório de Auditoria de Segurança — FastHotel</title>
+<style>
+  :root {
+    --critica: #B91C1C;
+    --alta: #EA580C;
+    --media: #D97706;
+    --baixa: #2563EB;
+    --forte: #059669;
+    --ink: #1f2937;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --bg-soft: #f8fafc;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: Arial, Helvetica, "Segoe UI", sans-serif;
+    color: var(--ink);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  h1, h2, h3, h4 { font-family: Arial, Helvetica, sans-serif; margin: 0 0 10px 0; color: #0f172a; }
+  h1 { font-size: 26px; }
+  h2 { font-size: 18px; border-bottom: 3px solid #0f172a; padding-bottom: 6px; margin-bottom: 16px; }
+  h3 { font-size: 14px; color: #111827; }
+  p { margin: 0 0 8px 0; }
+  code, pre { font-family: "Consolas", "Courier New", monospace; }
+  pre {
+    background: #0f172a; color: #e2e8f0; padding: 10px 12px; border-radius: 6px;
+    font-size: 10.5px; overflow-x: auto; white-space: pre-wrap; word-break: break-word;
+    line-height: 1.45; margin: 6px 0 10px 0;
+  }
+  .page { page-break-after: always; padding-top: 4px; }
+  .page:last-child { page-break-after: auto; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 16px 0; font-size: 11px; }
+  th, td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+  th { background: #0f172a; color: #fff; font-size: 10.5px; text-transform: uppercase; letter-spacing: .02em; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; color: #fff; font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .badge-critica { background: var(--critica); }
+  .badge-alta { background: var(--alta); }
+  .badge-media { background: var(--media); }
+  .badge-baixa { background: var(--baixa); }
+  .badge-forte { background: var(--forte); }
+  .finding { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 0 0 14px 0; break-inside: avoid; page-break-inside: avoid; }
+  .finding h3 { margin-bottom: 4px; }
+  .finding .meta { font-size: 10.5px; color: var(--muted); margin-bottom: 8px; }
+  .finding .label { font-weight: bold; color: #0f172a; }
+  .callout { background: var(--bg-soft); border-left: 4px solid #0f172a; padding: 8px 12px; border-radius: 4px; margin: 8px 0; }
+  .cover { display: flex; flex-direction: column; justify-content: center; height: 92vh; text-align: left; }
+  .cover .kicker { color: var(--muted); font-size: 13px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 10px; }
+  .cover h1 { font-size: 30px; margin-bottom: 6px; }
+  .cover .sub { font-size: 15px; color: #334155; margin-bottom: 30px; }
+  .cover-table td { border: none; padding: 4px 0; font-size: 12.5px; }
+  .cover-table td.k { color: var(--muted); width: 160px; font-weight: bold; }
+  .stat-grid { display: flex; gap: 10px; margin: 14px 0 20px 0; }
+  .stat-card { flex: 1; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; text-align: center; }
+  .stat-card .num { font-size: 26px; font-weight: bold; }
+  .stat-card .lbl { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+  .charts-row { display: flex; gap: 24px; align-items: flex-start; margin-bottom: 10px; }
+  .donut-wrap { display: flex; align-items: center; gap: 18px; }
+  .donut {
+    width: 150px; height: 150px; border-radius: 50%; position: relative; flex-shrink: 0;
+  }
+  .donut::after {
+    content: ''; position: absolute; inset: 26px; background: #fff; border-radius: 50%;
+  }
+  .donut-center {
+    position: absolute; inset: 26px; display: flex; align-items: center; justify-content: center;
+    flex-direction: column; text-align: center;
+  }
+  .donut-center .n { font-size: 22px; font-weight: bold; color: #0f172a; }
+  .donut-center .t { font-size: 9px; color: var(--muted); text-transform: uppercase; }
+  .legend { list-style: none; margin: 0; padding: 0; font-size: 11px; }
+  .legend li { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .swatch { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
+  .bars { flex: 1; }
+  .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+  .bar-label { width: 92px; font-size: 10.5px; flex-shrink: 0; }
+  .bar-track { flex: 1; background: #eef2f7; border-radius: 4px; height: 16px; position: relative; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; }
+  .bar-value { width: 26px; text-align: right; font-size: 10.5px; font-weight: bold; flex-shrink: 0; }
+  ul.plain { margin: 4px 0 12px 18px; padding: 0; }
+  ul.plain li { margin-bottom: 5px; }
+  .small { font-size: 10.5px; color: var(--muted); }
+  .section-note { font-size: 11px; color: var(--muted); font-style: italic; margin-bottom: 10px; }
+  .issue-block { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; break-inside: avoid; page-break-inside: avoid; }
+  .issue-block h4 { margin: 0 0 6px 0; font-size: 13px; }
+  .issue-block .labels { font-size: 10px; color: var(--muted); margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<!-- ============================= 1. CAPA ============================= -->
+<section class="page cover">
+  <div class="kicker">Atividade acadêmica — Aula 05 — Auditoria de Segurança</div>
+  <h1>Relatório de Auditoria de Segurança — FastHotel</h1>
+  <div class="sub">Análise estática do código real do sistema FastHotel (backend Node.js/Express/PostgreSQL e frontend React/TypeScript)</div>
+  <table class="cover-table">
+    <tr><td class="k">Projeto</td><td>FastHotel — github.com/MarcusGiordani/FastHotelTCC</td></tr>
+    <tr><td class="k">Data</td><td>02 de setembro de 2026</td></tr>
+    <tr><td class="k">Escopo</td><td>fasthotel-api/ (backend), fasthotel-app/ (frontend), .github/workflows/ (CI), database/schema.sql</td></tr>
+    <tr><td class="k">Stack identificada</td><td>Node.js + Express + PostgreSQL (pg) · React 19 + TypeScript (CRA) · JWT + bcryptjs · express-validator</td></tr>
+    <tr><td class="k">Metodologia</td><td>Revisão manual do código-fonte real (rotas, controllers, middlewares, componentes de frontend), sem execução de scanners automáticos. Cada achado exige evidência concreta em arquivo e linha. Nenhuma correção foi aplicada ao código do sistema.</td></tr>
+  </table>
+</section>
+
+<!-- ============================= 2. RESUMO EXECUTIVO ============================= -->
+<section class="page">
+  <h2>2. Resumo Executivo</h2>
+
+  <div class="stat-grid">
+    <div class="stat-card"><div class="num">9</div><div class="lbl">Achados totais</div></div>
+    <div class="stat-card"><div class="num" style="color:var(--critica)">4</div><div class="lbl">Críticos</div></div>
+    <div class="stat-card"><div class="num" style="color:var(--alta)">4</div><div class="lbl">Altos</div></div>
+    <div class="stat-card"><div class="num" style="color:var(--media)">1</div><div class="lbl">Médios</div></div>
+  </div>
+
+  <h3>Achados por severidade</h3>
+  <div class="charts-row">
+    <div class="donut-wrap">
+      <div class="donut" style="background: conic-gradient(var(--critica) 0deg 160deg, var(--alta) 160deg 320deg, var(--media) 320deg 360deg);">
+        <div class="donut-center"><span class="n">9</span><span class="t">achados</span></div>
+      </div>
+      <ul class="legend">
+        <li><span class="swatch" style="background:var(--critica)"></span> Crítica — 4 (44%)</li>
+        <li><span class="swatch" style="background:var(--alta)"></span> Alta — 4 (44%)</li>
+        <li><span class="swatch" style="background:var(--media)"></span> Média — 1 (11%)</li>
+        <li><span class="swatch" style="background:var(--baixa)"></span> Baixa — 0</li>
+      </ul>
+    </div>
+  </div>
+  <p class="small">Nenhum achado de severidade Baixa ou Informativa foi identificado; os valores acima refletem exatamente a contagem real dos 9 achados (seção 6).</p>
+
+  <h3>Achados por categoria</h3>
+  <div class="bars">
+    <div class="bar-row">
+      <div class="bar-label">1. Banco sem tranca</div>
+      <div class="bar-track"><div class="bar-fill" style="width:0%; background:var(--forte)"></div></div>
+      <div class="bar-value">0</div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label">2. Permissão no navegador</div>
+      <div class="bar-track"><div class="bar-fill" style="width:29%; background:var(--critica)"></div></div>
+      <div class="bar-value">2</div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label">3. IDOR</div>
+      <div class="bar-track"><div class="bar-fill" style="width:100%; background:var(--alta)"></div></div>
+      <div class="bar-value">7</div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label">4. Segredos expostos</div>
+      <div class="bar-track"><div class="bar-fill" style="width:0%; background:var(--forte)"></div></div>
+      <div class="bar-value">0</div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-label">5. XSS / inputs</div>
+      <div class="bar-track"><div class="bar-fill" style="width:0%; background:var(--forte)"></div></div>
+      <div class="bar-value">0</div>
+    </div>
+  </div>
+  <p class="small">Categorias 1, 4 e 5 foram integralmente analisadas e não apresentaram achado verificável (barras em verde) — ver seção 7. A causa raiz da Categoria 1 está tecnicamente refletida nos achados F07/F08 da Categoria 3 (ver seção 6 e seção 7).</p>
+
+  <div class="callout">
+    <strong>Achado mais crítico:</strong> a rota pública de cadastro (<code>POST /api/usuarios</code>) permite que qualquer visitante, sem autenticação, crie uma conta com <code>tipo_usuario: "admin"</code> — e, ainda que essa rota fosse corrigida, um usuário comum autenticado pode se auto-promover a administrador via <code>PUT /api/usuarios/:id</code>, pois esse endpoint não verifica propriedade nem restringe o campo <code>tipo_usuario</code> (achados F01 e F02).
+  </div>
+</section>
+
+<!-- ============================= 3. STACK DETECTADA ============================= -->
+<section class="page">
+  <h2>3. Stack Detectada</h2>
+  <p class="section-note">Confirmada por leitura direta de <code>package.json</code>, código-fonte e arquivos de configuração — nenhuma tecnologia foi assumida sem evidência.</p>
+  <table>
+    <tr><th>Tecnologia</th><th>Utilização</th></tr>
+    <tr><td>Node.js + Express 4</td><td>Backend REST (<code>fasthotel-api/server.js</code>, <code>fasthotel-api/app.js</code>)</td></tr>
+    <tr><td>PostgreSQL (driver <code>pg</code>)</td><td>Banco relacional, acesso via SQL parametrizado direto (<code>fasthotel-api/config/db.js</code>); sem ORM/query builder</td></tr>
+    <tr><td>React 19 + TypeScript + react-scripts (CRA)</td><td>Frontend (<code>fasthotel-app/src</code>)</td></tr>
+    <tr><td>react-router-dom v7</td><td>Roteamento client-side (<code>fasthotel-app/src/routes/index.tsx</code>)</td></tr>
+    <tr><td>styled-components</td><td>Estilização dos componentes React</td></tr>
+    <tr><td>jsonwebtoken (JWT)</td><td>Autenticação stateless — token assinado com <code>process.env.JWT_SECRET</code>, expiração de 1h (<code>userController.js</code>)</td></tr>
+    <tr><td>bcryptjs</td><td>Hash de senha (<code>genSalt(10)</code> + <code>hash</code>/<code>compare</code>)</td></tr>
+    <tr><td>Middleware <code>authMiddleware.js</code></td><td>Valida o JWT do header <code>x-auth-token</code> e popula <code>req.user</code></td></tr>
+    <tr><td>Middleware <code>authorize.js</code></td><td>Restringe rota por <code>tipo_usuario</code> (<code>admin</code>/<code>recepcionista</code>/<code>cliente</code>) — usado de forma inconsistente entre rotas (ver seção 6)</td></tr>
+    <tr><td>express-validator</td><td>Validação/normalização de entrada (<code>isEmail</code>, <code>normalizeEmail</code>, <code>isLength</code>, <code>isIn</code>) nas rotas de usuário e hóspede</td></tr>
+    <tr><td>Biblioteca de sanitização de HTML</td><td>Não identificada e não necessária — não há sink de HTML controlado pelo usuário no frontend (ver seção 7)</td></tr>
+    <tr><td>Socket.IO</td><td>Chat em tempo real (<code>server.js</code>, <code>ChatOnline</code>)</td></tr>
+    <tr><td>Jest + Supertest</td><td>Testes unitários e de integração do backend (<code>fasthotel-api/tests</code>)</td></tr>
+    <tr><td>Playwright</td><td>Testes E2E (<code>fasthotel-app/playwright.config.ts</code>, <code>fasthotel-app/tests/e2e</code>)</td></tr>
+    <tr><td>GitHub Actions</td><td>CI (<code>.github/workflows/ci.yml</code>) — roda unitários, integração, E2E e build a cada push/PR para <code>main</code></td></tr>
+    <tr><td>Docker</td><td><strong>Não utilizado</strong> — nenhum <code>Dockerfile</code>/<code>docker-compose</code> encontrado no repositório</td></tr>
+    <tr><td>Arquivos <code>.env</code></td><td><code>fasthotel-api/.env</code>, <code>fasthotel-api/.env.test</code> (reais, git-ignorados) e <code>fasthotel-api/.env.example</code>, <code>fasthotel-api/.env.test.example</code>, <code>fasthotel-app/.env</code> (config local, não sensível)</td></tr>
+  </table>
+</section>
+
+<!-- ============================= 4. PONTOS FORTES ============================= -->
+<section class="page">
+  <h2>4. Pontos Fortes</h2>
+  <p class="section-note">Proteções e boas práticas efetivamente verificadas no código — evidência de que a auditoria percorreu o sistema além de procurar apenas problemas.</p>
+  <ul class="plain">
+    <li><span class="badge badge-forte">OK</span> <strong>Senhas com hash bcrypt:</strong> <code>userController.js</code> (<code>createUser</code>, <code>changePassword</code>) usa <code>bcrypt.genSalt(10)</code> + <code>bcrypt.hash</code>; nenhuma senha em texto puro é gravada ou retornada pela API.</li>
+    <li><span class="badge badge-forte">OK</span> <strong>Senha nunca retornada:</strong> todos os <code>SELECT</code>/<code>RETURNING</code> de usuário (<code>createUser</code>, <code>getAllUsers</code>, <code>getUserById</code>, <code>updateUser</code>, <code>loginUser</code>) listam colunas explicitamente e nunca incluem <code>senha</code> no JSON de resposta.</li>
+    <li><span class="badge badge-forte">OK</span> <strong>Troca de senha corretamente escopada ao próprio usuário:</strong> <code>changePassword</code> (<code>userController.js:172-204</code>) usa <code>req.user.id</code> (do token) para localizar o registro, nunca um <code>id</code> vindo da URL/body — impossível alterar a senha de outra conta por esse endpoint.</li>
+    <li><span class="badge badge-forte">OK</span> <strong>Reservas isolam corretamente por usuário:</strong> <code>bookingController.getAllBookings</code> e <code>getBookingById</code> (linhas 111-192) filtram por <code>usuario_id = req.user.id</code> quando o solicitante não é <code>admin</code>; <code>updateBooking</code>/<code>deleteBooking</code> verificam <code>tipo_usuario</code> antes de alterar/excluir, redundante com a proteção de rota.</li>
+    <li><span class="badge badge-forte">OK</span> <strong>Relatórios/analytics corretamente restritos:</strong> todas as 8 rotas de <code>reportRoutes.js</code> exigem <code>auth</code> + <code>authorize(['admin','recepcionista'])</code>, incluindo o dashboard e os relatórios agregados.</li>
+    <li><span class="badge badge-forte">OK</span> <strong>SQL parametrizado em 100% das queries de aplicação:</strong> nenhuma concatenação de entrada do usuário em string SQL foi encontrada em nenhum controller — todas usam <code>$1, $2, ...</code>.</li>
+    <li><span class="badge badge-forte">OK</span> <strong>CORS restrito:</strong> <code>fasthotel-api/app.js</code> configura <code>origin: process.env.FRONTEND_URL</code> (não usa <code>*</code>).</li>
+    <li><span class="badge badge-forte">OK</span> <strong>Nenhum segredo real no repositório:</strong> busca completa no código, configs, CI e histórico do Git não encontrou chave, token ou senha real — apenas placeholders e credenciais de teste (ver seção 7).</li>
+    <li><span class="badge badge-forte">OK</span> <strong>Isolamento do banco de testes:</strong> os testes de integração e E2E têm trava explícita que recusa executar se <code>PGDATABASE</code> não for <code>fasthotel_test</code> (<code>tests/integration/setup.env.js</code>), nunca tocando o banco de desenvolvimento <code>fasthotel_db</code>.</li>
+    <li><span class="badge badge-forte">OK</span> <strong>Sem sink de HTML perigoso no frontend:</strong> nenhum uso de <code>dangerouslySetInnerHTML</code>, <code>innerHTML</code>, <code>eval</code> ou <code>new Function</code> em toda a árvore <code>fasthotel-app/src</code>.</li>
+    <li><span class="badge badge-forte">OK</span> <strong>JWT com expiração curta:</strong> tokens assinados com <code>expiresIn: '1h'</code> (<code>userController.js:149</code>), reduzindo a janela de uso de um token roubado.</li>
+  </ul>
+</section>
+
+<!-- ============================= 5. PONTOS FRACOS ============================= -->
+<section class="page">
+  <h2>5. Pontos Fracos</h2>
+  <p class="section-note">Riscos realmente encontrados no código, listados aqui em resumo. O detalhamento técnico completo está na seção 6.</p>
+  <ul class="plain">
+    <li><span class="badge badge-critica">Crítica</span> Qualquer visitante não autenticado pode se autocadastrar como <code>admin</code> (F01).</li>
+    <li><span class="badge badge-critica">Crítica</span> Qualquer usuário autenticado pode se autopromover a <code>admin</code> ou alterar dados de outra conta (F02).</li>
+    <li><span class="badge badge-media">Média</span> Qualquer usuário autenticado pode consultar dados de qualquer outro usuário por ID (F03).</li>
+    <li><span class="badge badge-critica">Crítica</span> Gestão de quartos (criar/editar/excluir) não exige nenhuma autenticação (F04).</li>
+    <li><span class="badge badge-alta">Alta</span> Qualquer usuário autenticado pode ler/editar/excluir qualquer hóspede, incluindo CPF e RG (F05).</li>
+    <li><span class="badge badge-alta">Alta</span> Qualquer usuário autenticado pode alterar o catálogo de serviços/preços (F06).</li>
+    <li><span class="badge badge-alta">Alta</span> Qualquer usuário autenticado pode lançar/excluir consumos em reservas de terceiros (F07).</li>
+    <li><span class="badge badge-alta">Alta</span> Qualquer usuário autenticado pode ler pagamentos de qualquer reserva (F08).</li>
+    <li><span class="badge badge-critica">Crítica</span> Qualquer usuário autenticado pode registrar um pagamento "aprovado" para qualquer reserva sem validação (F09).</li>
+  </ul>
+</section>
+
+<!-- ============================= 6. ACHADOS DETALHADOS ============================= -->
+<section class="page">
+  <h2>6. Achados Detalhados</h2>
+  <table>
+    <tr><th>ID</th><th>Categoria</th><th>Severidade</th><th>Arquivo:linha</th><th>Descrição</th></tr>
+    <tr><td>F01</td><td>2 — Permissão no navegador</td><td><span class="badge badge-critica">Crítica</span></td><td>userRoutes.js:9-18</td><td>Autocadastro público permite criar conta admin</td></tr>
+    <tr><td>F02</td><td>3 — IDOR</td><td><span class="badge badge-critica">Crítica</span></td><td>userController.js:73-96</td><td>PUT /usuarios/:id sem ownership permite autopromoção a admin</td></tr>
+    <tr><td>F03</td><td>3 — IDOR</td><td><span class="badge badge-media">Média</span></td><td>userController.js:58-70</td><td>GET /usuarios/:id expõe dados de qualquer usuário</td></tr>
+    <tr><td>F04</td><td>2 — Permissão no navegador</td><td><span class="badge badge-critica">Crítica</span></td><td>roomRoutes.js:7-11</td><td>CRUD de quartos sem nenhuma autenticação</td></tr>
+    <tr><td>F05</td><td>3 — IDOR</td><td><span class="badge badge-alta">Alta</span></td><td>guestRoutes.js:7-11</td><td>CRUD de hóspedes sem authorize/ownership (PII)</td></tr>
+    <tr><td>F06</td><td>3 — IDOR</td><td><span class="badge badge-alta">Alta</span></td><td>serviceRoutes.js:8-12</td><td>CRUD de serviços sem authorize</td></tr>
+    <tr><td>F07</td><td>3 — IDOR</td><td><span class="badge badge-alta">Alta</span></td><td>consumptionRoutes.js:8-12</td><td>CRUD de consumos sem authorize/ownership</td></tr>
+    <tr><td>F08</td><td>3 — IDOR</td><td><span class="badge badge-alta">Alta</span></td><td>paymentController.js:29-114</td><td>Leitura de pagamentos sem ownership</td></tr>
+    <tr><td>F09</td><td>3 — IDOR</td><td><span class="badge badge-critica">Crítica</span></td><td>paymentController.js:5-26</td><td>Criação de pagamento de terceiro, aprovado por padrão</td></tr>
+  </table>
+
+  <!-- F01 -->
+  <div class="finding">
+    <h3>F01 — Autocadastro público permite criar conta administradora</h3>
+    <div class="meta"><span class="label">Categoria:</span> 2 — Permissão definida no navegador &nbsp;|&nbsp; <span class="label">Severidade:</span> <span class="badge badge-critica">Crítica</span> &nbsp;|&nbsp; <span class="label">Rota:</span> POST /api/usuarios</div>
+    <p><span class="label">Arquivos:</span> <code>fasthotel-api/routes/userRoutes.js:9-18</code>; <code>fasthotel-app/src/pages/UserRegistration/index.tsx:22,41,81-90</code>; <code>fasthotel-app/src/routes/index.tsx:24</code></p>
+    <pre>// fasthotel-api/routes/userRoutes.js:9-18
+router.post(
+    '/',
+    [ body('nome')..., body('email')..., body('senha')...,
+      body('tipo_usuario').optional().isIn(['admin', 'recepcionista', 'cliente'])... ],
+    userController.createUser   // <- SEM middleware "auth" antes deste handler
+);</pre>
+    <pre>// fasthotel-app/src/pages/UserRegistration/index.tsx:87-89
+&lt;option value="recepcionista">Recepcionista&lt;/option>
+&lt;option value="admin">Administrador&lt;/option>
+&lt;option value="cliente">Cliente / Hóspede&lt;/option></pre>
+    <p><span class="label">Por que é explorável:</span> a rota de cadastro não possui middleware de autenticação e aceita o campo <code>tipo_usuario</code> diretamente do corpo da requisição; a tela pública <code>/register</code> (fora de <code>PrivateRoute</code>) oferece livremente a opção "Administrador" no formulário.</p>
+    <p><span class="label">Impacto:</span> comprometimento total do sistema — qualquer pessoa na internet obtém uma conta <code>admin</code> sem qualquer credencial prévia.</p>
+    <p><span class="label">Condições de exploração:</span> nenhuma. Não exige autenticação, não exige conhecimento prévio do sistema.</p>
+    <p><span class="label">Evidência:</span> <code>POST /api/usuarios</code> com corpo <code>{"nome":"x","email":"x@x.com","senha":"123456","tipo_usuario":"admin"}</code> retorna <code>201</code> e cria a conta como administrador, sem qualquer cabeçalho de autenticação.</p>
+  </div>
+
+  <!-- F02 -->
+  <div class="finding">
+    <h3>F02 — Auto-promoção a administrador via PUT /api/usuarios/:id</h3>
+    <div class="meta"><span class="label">Categoria:</span> 3 — IDOR / Escalonamento de privilégio &nbsp;|&nbsp; <span class="label">Severidade:</span> <span class="badge badge-critica">Crítica</span> &nbsp;|&nbsp; <span class="label">Rota:</span> PUT /api/usuarios/:id</div>
+    <p><span class="label">Arquivos:</span> <code>fasthotel-api/routes/userRoutes.js:22</code>; <code>fasthotel-api/controllers/userController.js:73-96</code></p>
+    <pre>// fasthotel-api/routes/userRoutes.js:22
+router.put('/:id', auth, authorize(['admin', 'recepcionista', 'cliente']), userController.updateUser);
+// authorize() lista TODOS os papéis válidos -> equivale a não restringir nada
+
+// fasthotel-api/controllers/userController.js:73-81
+const updateUser = async (req, res) => {
+    const { id } = req.params;
+    const { nome, email, tipo_usuario } = req.body;
+    const updatedUser = await pool.query(
+        'UPDATE usuarios SET nome = $1, email = $2, tipo_usuario = $3 WHERE id = $4 RETURNING id, nome, email, tipo_usuario',
+        [nome, email, tipo_usuario, id]     // <- "id" da URL, sem comparar com req.user.id
+    );</pre>
+    <p><span class="label">Por que é explorável:</span> o handler nunca compara <code>req.params.id</code> com <code>req.user.id</code>, e grava qualquer valor de <code>tipo_usuario</code> enviado no corpo, sem restringir esse campo a quem já é <code>admin</code>.</p>
+    <p><span class="label">Impacto:</span> qualquer conta <code>cliente</code> chama <code>PUT /api/usuarios/&lt;próprio id&gt;</code> com <code>{"tipo_usuario":"admin"}</code> e se torna administrador; o mesmo endpoint permite alterar e-mail/nome/papel de <strong>qualquer outro</strong> usuário, inclusive rebaixar administradores existentes.</p>
+    <p><span class="label">Condições de exploração:</span> exige apenas login válido como qualquer papel (inclusive o de menor privilégio, <code>cliente</code>).</p>
+    <p><span class="label">Evidência:</span> com token JWT de um usuário <code>cliente</code>, <code>PUT /api/usuarios/&lt;id do próprio token&gt;</code> com <code>{"tipo_usuario":"admin"}</code> retorna <code>200</code> e o campo <code>tipo_usuario</code> da resposta passa a ser <code>"admin"</code>.</p>
+  </div>
+
+  <!-- F03 -->
+  <div class="finding">
+    <h3>F03 — Exposição de dados de qualquer usuário via GET /api/usuarios/:id</h3>
+    <div class="meta"><span class="label">Categoria:</span> 3 — IDOR &nbsp;|&nbsp; <span class="label">Severidade:</span> <span class="badge badge-media">Média</span> &nbsp;|&nbsp; <span class="label">Rota:</span> GET /api/usuarios/:id</div>
+    <p><span class="label">Arquivos:</span> <code>fasthotel-api/routes/userRoutes.js:21</code>; <code>fasthotel-api/controllers/userController.js:58-70</code></p>
+    <pre>// fasthotel-api/controllers/userController.js:58-61
+const getUserById = async (req, res) => {
+    const { id } = req.params;
+    const user = await pool.query(
+      'SELECT id, nome, email, tipo_usuario, data_cadastro FROM usuarios WHERE id = $1', [id]
+    );  // <- nenhuma comparação com req.user.id nem restrição de papel</pre>
+    <p><span class="label">Por que é explorável:</span> a consulta usa apenas o <code>id</code> da URL; a rota permite os três papéis válidos (<code>admin</code>, <code>recepcionista</code>, <code>cliente</code>), tornando a checagem de <code>authorize</code> inócua.</p>
+    <p><span class="label">Impacto:</span> enumeração de contas (nome, e-mail, papel) de qualquer usuário do sistema por qualquer conta autenticada; não expõe senha (a query nunca seleciona essa coluna).</p>
+    <p><span class="label">Condições de exploração:</span> exige apenas login válido, qualquer papel; exige conhecer/adivinhar um ID numérico (sequencial).</p>
+    <p><span class="label">Evidência:</span> com token de um <code>cliente</code>, <code>GET /api/usuarios/1</code> (ou qualquer outro ID) retorna <code>200</code> com nome/e-mail/papel do usuário de ID 1, independentemente de quem fez a chamada.</p>
+  </div>
+
+  <!-- F04 -->
+  <div class="finding">
+    <h3>F04 — CRUD de quartos sem nenhuma autenticação</h3>
+    <div class="meta"><span class="label">Categoria:</span> 2 — Permissão definida no navegador &nbsp;|&nbsp; <span class="label">Severidade:</span> <span class="badge badge-critica">Crítica</span> &nbsp;|&nbsp; <span class="label">Rotas:</span> POST/GET/PUT/DELETE /api/quartos[/:id]</div>
+    <p><span class="label">Arquivos:</span> <code>fasthotel-api/routes/roomRoutes.js:7-11</code>; <code>fasthotel-api/controllers/roomController.js:5-30,72-95,98-110</code></p>
+    <pre>// fasthotel-api/routes/roomRoutes.js:7-11 (arquivo completo de rotas)
+router.post('/', roomController.createRoom);
+router.get('/', roomController.getAllRooms);
+router.get('/:id', roomController.getRoomById);
+router.put('/:id', roomController.updateRoom);
+router.delete('/:id', roomController.deleteRoom);
+// nenhuma rota usa "auth" — compare com bookingRoutes.js, que usa auth em todas</pre>
+    <p><span class="label">Por que é explorável:</span> diferentemente de todas as outras entidades do sistema, nenhuma rota de <code>quartos</code> exige o middleware <code>auth</code>; o controller também não implementa verificação própria.</p>
+    <p><span class="label">Impacto:</span> qualquer pessoa na internet, sem login, pode criar quartos falsos, alterar preços/status ou excluir quartos existentes, afetando diretamente a operação e o faturamento do hotel.</p>
+    <p><span class="label">Condições de exploração:</span> nenhuma.</p>
+    <p><span class="label">Evidência:</span> requisição sem cabeçalho <code>x-auth-token</code> para <code>DELETE /api/quartos/1</code> retorna <code>200 {"message":"Quarto excluído com sucesso!"}</code>.</p>
+  </div>
+</section>
+
+<section class="page">
+  <!-- F05 -->
+  <div class="finding">
+    <h3>F05 — CRUD de hóspedes sem authorize/ownership (exposição de PII)</h3>
+    <div class="meta"><span class="label">Categoria:</span> 3 — IDOR &nbsp;|&nbsp; <span class="label">Severidade:</span> <span class="badge badge-alta">Alta</span> &nbsp;|&nbsp; <span class="label">Rotas:</span> GET/PUT/DELETE /api/hospedes/:id</div>
+    <p><span class="label">Arquivos:</span> <code>fasthotel-api/routes/guestRoutes.js:7-11</code>; <code>fasthotel-api/controllers/guestController.js:96-108,111-142,145-205</code>; evidência de frontend em <code>fasthotel-app/src/pages/Guests/index.tsx:218-229</code> e <code>fasthotel-app/src/components/PrivateRoute/index.tsx:8-11</code></p>
+    <pre>// fasthotel-api/routes/guestRoutes.js:7-11
+router.post('/', auth, guestController.createGuest);
+router.get('/', auth, guestController.getAllGuests);
+router.get('/:id', auth, guestController.getGuestById);
+router.put('/:id', auth, guestController.updateGuest);
+router.delete('/:id', auth, guestController.deleteGuest);
+// só "auth" (login válido) - sem authorize(['admin','recepcionista']) e sem checagem de propriedade
+
+// fasthotel-app/src/components/PrivateRoute/index.tsx:8-11
+const token = localStorage.getItem('token');
+return token ? children : &lt;Navigate to="/" replace />;
+// só verifica se existe token - não verifica tipo_usuario</pre>
+    <p><span class="label">Por que é explorável:</span> qualquer usuário autenticado, inclusive <code>cliente</code>, chega à tela <code>/guests</code> (o componente de rota protegida só olha para o token) e, mesmo sem UI, pode chamar diretamente <code>GET/PUT/DELETE /api/hospedes/:id</code> para qualquer hóspede.</p>
+    <p><span class="label">Impacto:</span> leitura e alteração de CPF, RG, data de nascimento, endereço e telefone de qualquer hóspede; exclusão de um hóspede remove em cascata suas reservas, pagamentos e conversas de chat (<code>guestController.js:145-205</code>).</p>
+    <p><span class="label">Condições de exploração:</span> exige apenas login válido, qualquer papel.</p>
+    <p><span class="label">Evidência:</span> com token de <code>cliente</code>, <code>GET /api/hospedes/&lt;qualquer id&gt;</code> retorna <code>200</code> com CPF/RG completos do hóspede; <code>DELETE /api/hospedes/&lt;id&gt;</code> retorna <code>200</code> e remove o registro.</p>
+  </div>
+
+  <!-- F06 -->
+  <div class="finding">
+    <h3>F06 — CRUD de serviços sem authorize</h3>
+    <div class="meta"><span class="label">Categoria:</span> 3 — IDOR &nbsp;|&nbsp; <span class="label">Severidade:</span> <span class="badge badge-alta">Alta</span> &nbsp;|&nbsp; <span class="label">Rotas:</span> POST/PUT/DELETE /api/servicos[/:id]</div>
+    <p><span class="label">Arquivos:</span> <code>fasthotel-api/routes/serviceRoutes.js:8-12</code>; <code>fasthotel-api/controllers/serviceController.js:5-21,50-69,72-84</code></p>
+    <pre>// fasthotel-api/routes/serviceRoutes.js:8-12
+router.post('/', auth, serviceController.createService);
+router.put('/:id', auth, serviceController.updateService);
+router.delete('/:id', auth, serviceController.deleteService);
+// só "auth" - qualquer papel autenticado altera o catálogo</pre>
+    <p><span class="label">Por que é explorável:</span> não há <code>authorize</code> nas rotas de escrita; o controller também não valida <code>req.user.tipo_usuario</code>.</p>
+    <p><span class="label">Impacto:</span> um <code>cliente</code> pode alterar preços do catálogo de serviços, excluir itens ou criar serviços falsos, afetando faturamento e relatórios financeiros.</p>
+    <p><span class="label">Condições de exploração:</span> exige apenas login válido, qualquer papel.</p>
+    <p><span class="label">Evidência:</span> com token de <code>cliente</code>, <code>PUT /api/servicos/1</code> com <code>{"preco":0}</code> retorna <code>200</code> e altera o preço do serviço para qualquer usuário do sistema.</p>
+  </div>
+
+  <!-- F07 -->
+  <div class="finding">
+    <h3>F07 — CRUD de consumos sem authorize nem verificação da reserva</h3>
+    <div class="meta"><span class="label">Categoria:</span> 3 — IDOR &nbsp;|&nbsp; <span class="label">Severidade:</span> <span class="badge badge-alta">Alta</span> &nbsp;|&nbsp; <span class="label">Rotas:</span> POST/GET/PUT/DELETE /api/consumos[/:id]</div>
+    <p><span class="label">Arquivos:</span> <code>fasthotel-api/routes/consumptionRoutes.js:8-12</code>; <code>fasthotel-api/controllers/consumptionController.js:5-34,37-70,105-150,153-165</code></p>
+    <pre>// fasthotel-api/controllers/consumptionController.js:5-13
+const createConsumption = async (req, res) => {
+    const { reserva_id, servico_id, quantidade } = req.body;
+    // reserva_id vem do body e não é validado contra req.user.id em nenhum momento</pre>
+    <p><span class="label">Por que é explorável:</span> o mecanismo de isolamento por <code>usuario_id</code> que existe em <code>reservas</code> (ver <code>bookingController</code>) não foi propagado para <code>consumos</code>; a rota só exige <code>auth</code>, não <code>authorize</code>, e o controller não confere a quem pertence a <code>reserva_id</code>.</p>
+    <p><span class="label">Impacto:</span> um <code>cliente</code> pode lançar consumos falsos na conta de outro hóspede/reserva, excluir consumos legítimos de terceiros (fraude/sabotagem de faturamento), ou visualizar o consumo de qualquer reserva.</p>
+    <p><span class="label">Condições de exploração:</span> exige apenas login válido, qualquer papel; exige conhecer/adivinhar um <code>reserva_id</code>.</p>
+    <p><span class="label">Evidência:</span> com token de <code>cliente</code> A, <code>POST /api/consumos</code> com <code>reserva_id</code> pertencente ao <code>cliente</code> B retorna <code>201</code> e o consumo passa a constar na conta de B.</p>
+  </div>
+</section>
+
+<section class="page">
+  <!-- F08 -->
+  <div class="finding">
+    <h3>F08 — Leitura de pagamentos sem controle de acesso</h3>
+    <div class="meta"><span class="label">Categoria:</span> 3 — IDOR / 1 — Banco sem tranca &nbsp;|&nbsp; <span class="label">Severidade:</span> <span class="badge badge-alta">Alta</span> &nbsp;|&nbsp; <span class="label">Rotas:</span> GET /api/pagamentos, GET /api/pagamentos/:id</div>
+    <p><span class="label">Arquivos:</span> <code>fasthotel-api/routes/paymentRoutes.js:9,14</code>; <code>fasthotel-api/controllers/paymentController.js:29-74,77-114</code></p>
+    <pre>// fasthotel-api/routes/paymentRoutes.js:9,14
+router.get('/', auth, paymentController.getAllPayments);      // sem authorize, sem filtro por dono
+router.get('/:id', auth, paymentController.getPaymentById);   // idem
+
+// paymentController.js:29-33 — getAllPayments monta a query e só filtra por reserva_id
+// OPCIONAL vindo da query string; nunca por req.user.id</pre>
+    <p><span class="label">Por que é explorável:</span> assim como em F07, o filtro manual por <code>usuario_id</code> usado em <code>bookingController</code> não foi replicado aqui — a query já faz <code>JOIN</code> com <code>reservas r</code> (que tem <code>usuario_id</code>), mas nunca adiciona a condição <code>r.usuario_id = req.user.id</code>.</p>
+    <p><span class="label">Impacto:</span> exposição do histórico financeiro (valor pago, método, status, nome do hóspede) de qualquer reserva para qualquer conta autenticada.</p>
+    <p><span class="label">Condições de exploração:</span> exige apenas login válido, qualquer papel.</p>
+    <p><span class="label">Evidência:</span> com token de <code>cliente</code>, <code>GET /api/pagamentos</code> retorna a lista completa de pagamentos de <strong>todos</strong> os usuários do sistema, não apenas os próprios.</p>
+  </div>
+
+  <!-- F09 -->
+  <div class="finding">
+    <h3>F09 — Criação de pagamento para reserva de terceiro, aprovado por padrão</h3>
+    <div class="meta"><span class="label">Categoria:</span> 3 — IDOR &nbsp;|&nbsp; <span class="label">Severidade:</span> <span class="badge badge-critica">Crítica</span> &nbsp;|&nbsp; <span class="label">Rota:</span> POST /api/pagamentos</div>
+    <p><span class="label">Arquivos:</span> <code>fasthotel-api/routes/paymentRoutes.js:8</code>; <code>fasthotel-api/controllers/paymentController.js:5-26</code></p>
+    <pre>// fasthotel-api/controllers/paymentController.js:5-17
+const createPayment = async (req, res) => {
+    const { reserva_id, valor_pago, metodo_pagamento, status_pagamento } = req.body;
+    const bookingExists = await pool.query('SELECT id FROM reservas WHERE id = $1', [reserva_id]);
+    // só confere se a reserva EXISTE - não confere se pertence a quem chama
+    ...
+    const newPayment = await pool.query(
+        'INSERT INTO pagamentos (reserva_id, valor_pago, metodo_pagamento, status_pagamento) VALUES ($1, $2, $3, $4) RETURNING *',
+        [reserva_id, valor_pago, metodo_pagamento, status_pagamento || 'aprovado']  // <- padrão "aprovado"
+    );</pre>
+    <p><span class="label">Por que é explorável:</span> a rota só exige <code>auth</code> (nenhum <code>authorize</code>); aceita qualquer <code>reserva_id</code> existente, de qualquer usuário; e se o chamador não enviar <code>status_pagamento</code>, o valor grava automaticamente como <code>'aprovado'</code>, sem qualquer confirmação de que um pagamento real ocorreu.</p>
+    <p><span class="label">Impacto:</span> fraude financeira — uma conta <code>cliente</code> registra a própria hospedagem (ou a de outra pessoa) como paga sem ter pago nada; extratos e relatórios (<code>getPaymentExtract</code>, <code>getReservationPaymentSummaries</code>) passam a considerar a reserva "Paga".</p>
+    <p><span class="label">Condições de exploração:</span> exige apenas login válido, qualquer papel; exige conhecer um <code>reserva_id</code> válido (o próprio, por exemplo).</p>
+    <p><span class="label">Evidência:</span> com token de <code>cliente</code>, <code>POST /api/pagamentos</code> com <code>{"reserva_id": &lt;própria reserva&gt;, "valor_pago": 999999, "metodo_pagamento": "pix"}</code> (sem <code>status_pagamento</code>) retorna <code>201</code> com <code>status_pagamento: "aprovado"</code>.</p>
+  </div>
+</section>
+
+<!-- ============================= 7. CATEGORIAS SEM VULNERABILIDADE ============================= -->
+<section class="page">
+  <h2>7. Categorias Sem Vulnerabilidade Verificável</h2>
+
+  <h3>Categoria 4 — Chaves expostas / segredos</h3>
+  <p><span class="badge badge-forte">Analisada — sem achado</span></p>
+  <p>Foi feita busca no código-fonte completo (backend e frontend), em <code>.env.example</code>, <code>.env.test.example</code>, no workflow de CI (<code>.github/workflows/ci.yml</code>) e em <strong>todo o histórico do Git</strong> (<code>git log --all -p</code>) por padrões de chave de API, JWT secret, senha, token de webhook e credenciais em URLs de conexão. Os únicos valores encontrados foram placeholders explícitos (<code>troque-por-sua-senha-local</code>, <code>troque-por-uma-chave-longa-e-aleatoria</code>, <code>sua-senha-local</code>) e uma credencial de teste sem valor sensível (<code>JWT_SECRET = [REDACTED]</code>, valor fixo usado apenas nos testes de integração/E2E locais, nunca em produção). O <code>.env</code> e o <code>.env.test</code> reais (que contêm a senha do PostgreSQL local) nunca foram commitados — confirmado tanto pelo <code>.gitignore</code> atual quanto pela ausência desses arquivos em todo o histórico. O CI usa exclusivamente credenciais de teste definidas dentro do próprio arquivo de workflow (<code>postgres</code>/<code>postgres</code> no container do PostgreSQL, <code>JWT_SECRET = [REDACTED]</code>). <strong>Não foi encontrado achado verificável nesta categoria.</strong></p>
+
+  <h3>Categoria 5 — Inputs sem tratamento / XSS</h3>
+  <p><span class="badge badge-forte">Analisada — sem achado</span></p>
+  <p>Foi feita busca por <code>dangerouslySetInnerHTML</code>, <code>innerHTML</code>, <code>document.write</code>, <code>eval</code>, <code>new Function</code>, <code>javascript:</code> e <code>insertAdjacentHTML</code> em toda a árvore <code>fasthotel-app/src</code> — nenhuma ocorrência. Nenhum componente insere HTML/Markdown vindo do usuário; todo conteúdo dinâmico (incluindo mensagens de chat em <code>ChatOnline/index.tsx</code>, que é o dado mais "livre" gerado por usuário no sistema) é renderizado via interpolação JSX padrão (<code>{msg.conteudo}</code>), que o React escapa automaticamente. Nenhum <code>href</code>/<code>src</code> do projeto é construído a partir de entrada do usuário. No backend, não existe geração de e-mail, template HTML ou qualquer resposta que misture HTML com dados do usuário — a API só retorna JSON. <strong>Não foi encontrado achado verificável nesta categoria.</strong></p>
+
+  <h3>Categoria 1 — Banco sem tranca (isolamento de dados)</h3>
+  <p><span class="badge badge-forte" style="background:#334155">Analisada — mecanismo identificado</span></p>
+  <p>O FastHotel não é multi-tenant; o mecanismo de isolamento identificado é um <strong>filtro manual por <code>usuario_id</code></strong>, aplicado quando o solicitante não é <code>admin</code>. Esse mecanismo está <strong>corretamente implementado</strong> em <code>bookingController.getAllBookings</code> e <code>getBookingById</code> (<code>fasthotel-api/controllers/bookingController.js:111-192</code>) — ver seção 4, Pontos Fortes. Entretanto, o mesmo filtro <strong>não foi propagado</strong> para as tabelas dependentes de <code>reservas</code>: <code>pagamentos</code> e <code>consumos</code>. Essa lacuna já está documentada tecnicamente como F07 e F08 (Categoria 3) na seção 6 — não há, portanto, um achado adicional e distinto de Categoria 1 além do que já foi reportado nesses dois IDs.</p>
+</section>
+
+<!-- ============================= 8. RECOMENDAÇÕES ============================= -->
+<section class="page">
+  <h2>8. Recomendações</h2>
+  <p class="section-note">Priorização baseada exclusivamente nos achados reais desta auditoria — nenhuma prioridade foi criada para achados inexistentes.</p>
+
+  <h3><span class="badge badge-critica">P1 — Urgente</span> Corrigir antes de qualquer outra atividade</h3>
+  <ul class="plain">
+    <li><strong>F01</strong> — Exigir autenticação/privilégio de <code>admin</code> para criar contas com <code>tipo_usuario</code> diferente de <code>cliente</code>; a rota pública de cadastro deve sempre forçar <code>cliente</code>.</li>
+    <li><strong>F02</strong> — Em <code>updateUser</code>, comparar <code>req.params.id</code> com <code>req.user.id</code> e proibir a alteração de <code>tipo_usuario</code> por quem não é <code>admin</code>.</li>
+    <li><strong>F04</strong> — Adicionar <code>auth</code> + <code>authorize(['admin','recepcionista'])</code> nas rotas de escrita de <code>roomRoutes.js</code>.</li>
+    <li><strong>F09</strong> — Restringir <code>POST /api/pagamentos</code> a <code>admin</code>/<code>recepcionista</code>.</li>
+  </ul>
+
+  <h3><span class="badge badge-alta">P2 — Alto</span> Corrigir na sequência, mesmo padrão de causa raiz</h3>
+  <ul class="plain">
+    <li><strong>F05</strong> — Adicionar <code>authorize(['admin','recepcionista'])</code> em <code>guestRoutes.js</code>.</li>
+    <li><strong>F06</strong> — Adicionar <code>authorize(['admin','recepcionista'])</code> nas rotas de escrita de <code>serviceRoutes.js</code>.</li>
+    <li><strong>F07</strong> — Adicionar <code>authorize</code> nas rotas de escrita de <code>consumptionRoutes.js</code> e filtrar leitura por propriedade da reserva.</li>
+    <li><strong>F08</strong> — Filtrar <code>getAllPayments</code>/<code>getPaymentById</code> por <code>reservas.usuario_id = req.user.id</code> quando o papel não for <code>admin</code>/<code>recepcionista</code>.</li>
+  </ul>
+
+  <h3><span class="badge badge-media">P3 — Moderado</span></h3>
+  <ul class="plain">
+    <li><strong>F03</strong> — Restringir <code>GET /api/usuarios/:id</code> de terceiros a <code>admin</code>/<code>recepcionista</code>; permitir a qualquer usuário apenas o próprio registro.</li>
+  </ul>
+
+  <p class="small">O detalhamento de como implementar e testar cada correção está em <code>docs/security-audit/plano-correcao-vulnerabilidades.md</code>. Nenhuma correção foi aplicada ao código nesta auditoria.</p>
+</section>
+
+<!-- ============================= 9. ISSUES PARA O GITHUB ============================= -->
+<section class="page">
+  <h2>9. Issues para o GitHub</h2>
+  <p class="section-note">9 achados agrupados em 6 issues por causa raiz semelhante, prontas para copiar em Markdown.</p>
+
+<pre>--- ISSUE 1 ---
+
+# [Segurança] Autocadastro público permite criar conta administradora (F01)
+
+Labels sugeridas:
+security
+severity:critical
+
+## Descrição
+POST /api/usuarios não exige autenticação e aceita "tipo_usuario" vindo do
+corpo da requisição. A tela pública /register oferece livremente a opção
+"Administrador" no formulário, sem qualquer restrição.
+
+## Por que é explorável
+Não há middleware "auth" na rota de cadastro (fasthotel-api/routes/userRoutes.js:9-18).
+Não há verificação de quem está fazendo a chamada antes de gravar tipo_usuario.
+
+## Evidência
+
+fasthotel-api/routes/userRoutes.js:9-18
+fasthotel-app/src/pages/UserRegistration/index.tsx:22,41,81-90
+fasthotel-app/src/routes/index.tsx:24
+
+```text
+router.post('/', [validações...], userController.createUser); // sem auth
+```
+
+## Impacto
+Comprometimento total do sistema por qualquer visitante não autenticado.
+
+## Sugestão de correção
+A rota pública deve sempre forçar tipo_usuario='cliente'. Criar rota separada
+e protegida (auth + authorize(['admin'])) para criação de contas de equipe.
+
+## Critérios de aceite
+- POST /api/usuarios não autenticado nunca cria conta admin/recepcionista
+- Existe rota protegida por admin para criar contas de equipe
+- Teste de integração cobre os dois casos acima
+
+--- FIM ISSUE 1 ---
+
+--- ISSUE 2 ---
+
+# [Segurança] Qualquer usuário autenticado pode se autopromover a administrador
+  ou alterar dados de qualquer conta (F02, F03)
+
+Labels sugeridas:
+security
+severity:critical
+
+## Descrição
+PUT /api/usuarios/:id não verifica se o "id" da URL corresponde ao usuário
+autenticado, e grava qualquer "tipo_usuario" enviado no corpo. GET /api/usuarios/:id
+retorna dados (nome, e-mail, papel) de qualquer usuário para qualquer autenticado.
+
+## Por que é explorável
+authorize(['admin','recepcionista','cliente']) inclui todos os papéis válidos,
+equivalendo a nenhuma restrição. O controller nunca compara req.params.id com
+req.user.id (fasthotel-api/controllers/userController.js:58-70,73-96).
+
+## Evidência
+
+fasthotel-api/routes/userRoutes.js:21,22
+fasthotel-api/controllers/userController.js:58-70 (getUserById)
+fasthotel-api/controllers/userController.js:73-96 (updateUser)
+
+```text
+const updatedUser = await pool.query(
+    'UPDATE usuarios SET nome = $1, email = $2, tipo_usuario = $3 WHERE id = $4 ...',
+    [nome, email, tipo_usuario, id]
+);
+```
+
+## Impacto
+Qualquer conta "cliente" pode se tornar "admin" chamando o próprio ID, ou alterar/
+consultar dados de qualquer outra conta.
+
+## Sugestão de correção
+Comparar req.params.id com req.user.id; só permitir alterar/consultar dados de
+terceiros e o campo tipo_usuario quando req.user.tipo_usuario === 'admin'.
+
+## Critérios de aceite
+- Um usuário não-admin não consegue alterar tipo_usuario (nem o próprio, nem de outros)
+- Um usuário não-admin só consulta/altera o próprio registro
+- Teste de integração cobre autopromoção, alteração de terceiro e leitura de terceiro
+
+--- FIM ISSUE 2 ---
+
+--- ISSUE 3 ---
+
+# [Segurança] Rotas de gestão de quartos sem nenhuma autenticação (F04)
+
+Labels sugeridas:
+security
+severity:critical
+
+## Descrição
+Todas as rotas de /api/quartos (criar, listar, obter, atualizar, excluir) estão
+registradas sem o middleware de autenticação "auth".
+
+## Por que é explorável
+fasthotel-api/routes/roomRoutes.js:7-11 não importa nem usa "auth"/"authorize"
+em nenhuma das 5 rotas, diferente de todas as outras entidades do sistema.
+
+## Evidência
+
+fasthotel-api/routes/roomRoutes.js:7-11
+
+```text
+router.post('/', roomController.createRoom);
+router.put('/:id', roomController.updateRoom);
+router.delete('/:id', roomController.deleteRoom);
+```
+
+## Impacto
+Qualquer pessoa na internet, sem login, pode criar, alterar preços/status ou
+excluir quartos do hotel.
+
+## Sugestão de correção
+Adicionar auth + authorize(['admin','recepcionista']) nas rotas de escrita
+(POST, PUT, DELETE). Leitura pode continuar pública ou exigir apenas auth,
+conforme regra de negócio.
+
+## Critérios de aceite
+- POST/PUT/DELETE em /api/quartos sem token retornam 401
+- cliente autenticado recebe 403 nessas rotas (se a regra for admin/recepcionista)
+- admin/recepcionista continuam funcionando normalmente
+
+--- FIM ISSUE 3 ---
+
+--- ISSUE 4 ---
+
+# [Segurança] Rotas de Hóspedes, Serviços e Consumos sem controle de acesso (F05, F06, F07)
+
+Labels sugeridas:
+security
+severity:high
+
+## Descrição
+As rotas de /api/hospedes, /api/servicos e /api/consumos exigem apenas login
+válido ("auth"), sem restringir por papel ("authorize") nem verificar
+propriedade do recurso. Qualquer conta "cliente" pode ler/alterar/excluir
+hóspedes (incluindo CPF/RG), o catálogo de serviços/preços, e consumos de
+QUALQUER reserva.
+
+## Por que é explorável
+- fasthotel-api/routes/guestRoutes.js:7-11 (só auth)
+- fasthotel-api/routes/serviceRoutes.js:8-12 (só auth)
+- fasthotel-api/routes/consumptionRoutes.js:8-12 (só auth)
+Nenhum dos três controllers valida req.user.tipo_usuario nem propriedade da reserva.
+Confirmado também no frontend: fasthotel-app/src/pages/Guests/index.tsx:218-229
+renderiza os botões de editar/excluir para qualquer usuário logado, e
+fasthotel-app/src/components/PrivateRoute/index.tsx:8-11 só verifica o token,
+nunca o papel.
+
+## Evidência
+
+fasthotel-api/controllers/guestController.js:96-108,111-142,145-205
+fasthotel-api/controllers/serviceController.js:5-21,50-69,72-84
+fasthotel-api/controllers/consumptionController.js:5-34,105-150,153-165
+
+## Impacto
+Exposição/alteração de PII de hóspedes; tampering de preços; fraude/sabotagem
+de consumos em reservas de terceiros.
+
+## Sugestão de correção
+Adicionar authorize(['admin','recepcionista']) nas rotas de escrita das três
+entidades; em Consumos, filtrar leitura por propriedade da reserva
+(reservas.usuario_id = req.user.id) para papéis não-admin, no mesmo padrão já
+usado em bookingController.getAllBookings.
+
+## Critérios de aceite
+- cliente autenticado recebe 403 ao criar/alterar/excluir hóspede, serviço ou consumo
+- cliente autenticado, ao listar consumos, só vê os das próprias reservas
+- admin/recepcionista continuam funcionando normalmente
+
+--- FIM ISSUE 4 ---
+
+--- ISSUE 5 ---
+
+# [Segurança] Pagamentos sem controle de acesso e criação fraudulenta com status "aprovado" (F08, F09)
+
+Labels sugeridas:
+security
+severity:critical
+
+## Descrição
+GET /api/pagamentos e GET /api/pagamentos/:id retornam dados financeiros de
+qualquer reserva para qualquer usuário autenticado. POST /api/pagamentos aceita
+qualquer reserva_id e grava status_pagamento='aprovado' por padrão quando o
+campo não é enviado, sem qualquer confirmação de pagamento real.
+
+## Por que é explorável
+fasthotel-api/routes/paymentRoutes.js:8,9,14 só exigem "auth" nessas três rotas.
+O filtro manual por usuario_id, usado corretamente em bookingController, não foi
+propagado para pagamentos.
+
+## Evidência
+
+fasthotel-api/controllers/paymentController.js:5-26 (createPayment)
+fasthotel-api/controllers/paymentController.js:29-74 (getAllPayments)
+fasthotel-api/controllers/paymentController.js:77-114 (getPaymentById)
+
+```text
+[reserva_id, valor_pago, metodo_pagamento, status_pagamento || 'aprovado']
+```
+
+## Impacto
+Exposição de histórico financeiro de terceiros; fraude - qualquer "cliente"
+pode marcar a própria (ou outra) reserva como paga sem pagar nada.
+
+## Sugestão de correção
+Restringir POST /api/pagamentos a admin/recepcionista. Filtrar GET (lista e por
+ID) por reservas.usuario_id = req.user.id quando o papel não for admin/recepcionista.
+
+## Critérios de aceite
+- cliente autenticado recebe 403 ao tentar criar um pagamento
+- cliente autenticado só vê pagamentos das próprias reservas
+- admin/recepcionista continuam funcionando normalmente
+
+--- FIM ISSUE 5 ---
+
+--- ISSUE 6 ---
+
+# [Segurança] GET /api/usuarios/:id expõe dados de qualquer usuário (F03)
+
+Labels sugeridas:
+security
+severity:medium
+
+## Descrição
+Qualquer usuário autenticado pode consultar nome, e-mail, tipo_usuario e data
+de cadastro de qualquer outro usuário, apenas informando o ID na URL.
+
+## Por que é explorável
+authorize(['admin','recepcionista','cliente']) na rota GET /:id inclui todos
+os papéis válidos; o controller não compara o ID da URL com req.user.id.
+
+## Evidência
+
+fasthotel-api/routes/userRoutes.js:21
+fasthotel-api/controllers/userController.js:58-70
+
+## Impacto
+Enumeração de contas do sistema (quem é admin, e-mails) por qualquer conta
+autenticada, incluindo "cliente".
+
+## Sugestão de correção
+Permitir consulta de terceiros apenas para admin/recepcionista; para os demais
+papéis, permitir apenas o próprio registro (id === req.user.id).
+
+## Critérios de aceite
+- cliente consultando o próprio ID recebe 200
+- cliente consultando ID de outro usuário recebe 403
+- admin/recepcionista continuam consultando qualquer ID
+
+--- FIM ISSUE 6 ---
+</pre>
+</section>
+
+</body>
+</html>
