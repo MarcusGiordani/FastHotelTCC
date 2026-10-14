@@ -1,35 +1,75 @@
 // fasthotel-api/controllers/paymentController.js
 const pool = require('../config/db');
+const { sincronizarReceitaDoPagamento, estornarReceitaDoPagamento } = require('./financeController');
 
 // Criar um novo pagamento
+// Transação: INSERT do pagamento + (se aprovado) geração da receita automática no
+// Fluxo de Caixa acontecem na mesma transação — ou os dois são gravados, ou nenhum.
 const createPayment = async (req, res) => {
     const { reserva_id, valor_pago, metodo_pagamento, status_pagamento } = req.body;
+    const statusResolvido = status_pagamento || 'aprovado';
 
+    const client = await pool.connect();
     try {
-        const bookingExists = await pool.query('SELECT id FROM reservas WHERE id = $1', [reserva_id]);
+        await client.query('BEGIN');
+
+        const bookingExists = await client.query('SELECT id FROM reservas WHERE id = $1', [reserva_id]);
         if (bookingExists.rows.length === 0) {
+            await client.query('ROLLBACK');
             return res.status(404).json({ message: 'Reserva não encontrada.' });
         }
 
-        const newPayment = await pool.query(
+        const newPayment = await client.query(
             'INSERT INTO pagamentos (reserva_id, valor_pago, metodo_pagamento, status_pagamento) VALUES ($1, $2, $3, $4) RETURNING *',
-            [reserva_id, valor_pago, metodo_pagamento, status_pagamento || 'aprovado']
+            [reserva_id, valor_pago, metodo_pagamento, statusResolvido]
         );
+        const payment = newPayment.rows[0];
+
+        // Só pagamento efetivamente 'aprovado' vira receita — pendente nunca é contabilizado.
+        if (payment.status_pagamento === 'aprovado') {
+            await sincronizarReceitaDoPagamento(client, {
+                pagamentoId: payment.id,
+                reservaId: payment.reserva_id,
+                valorPago: payment.valor_pago,
+                metodoPagamento: payment.metodo_pagamento,
+                criadoPor: req.user.id,
+            });
+        }
+
+        await client.query('COMMIT');
         res.status(201).json({
             message: 'Pagamento registrado com sucesso!',
-            payment: newPayment.rows[0]
+            payment
         });
     } catch (err) {
+        await client.query('ROLLBACK');
         console.error('Erro ao registrar pagamento:', err.message);
         res.status(500).json({ message: 'Erro no servidor ao registrar pagamento.', error: err.message });
+    } finally {
+        client.release();
     }
 };
 
 // Obter todos os pagamentos (Histórico de transações individuais filtrado)
+// Usuários não-admin/recepcionista só veem pagamentos das PRÓPRIAS reservas (mesmo padrão de bookingController.getAllBookings)
 const getAllPayments = async (req, res) => {
     const { reserva_id } = req.query;
+    const { id: usuarioId, tipo_usuario: tipoUsuario } = req.user;
     try {
-        let query = `
+        const conditions = [`r.status_reserva NOT IN ('finalizada', 'cancelada')`];
+        const params = [];
+
+        if (reserva_id) {
+            params.push(reserva_id);
+            conditions.push(`p.reserva_id = $${params.length}`);
+        }
+
+        if (tipoUsuario !== 'admin' && tipoUsuario !== 'recepcionista') {
+            params.push(usuarioId);
+            conditions.push(`r.usuario_id = $${params.length}`);
+        }
+
+        const query = `
             SELECT
                 p.id,
                 p.reserva_id,
@@ -53,17 +93,9 @@ const getAllPayments = async (req, res) => {
                 quartos q ON r.quarto_id = q.id
             LEFT JOIN
                 hospedes hp ON r.hospede_principal_id = hp.id
-            WHERE
-                r.status_reserva NOT IN ('finalizada', 'cancelada')
+            WHERE ${conditions.join(' AND ')}
+            ORDER BY p.data_pagamento DESC
         `;
-        const params = [];
-
-        if (reserva_id) {
-            query += (params.length === 0 ? ' WHERE ' : ' AND ') + 'p.reserva_id = $1';
-            params.push(reserva_id);
-        }
-        
-        query += ' ORDER BY p.data_pagamento DESC';
 
         const allPayments = await pool.query(query, params);
         res.status(200).json(allPayments.rows);
@@ -74,9 +106,19 @@ const getAllPayments = async (req, res) => {
 };
 
 // Obter pagamento por ID
+// Usuários não-admin/recepcionista só acessam pagamento de reserva PRÓPRIA (mesmo padrão de bookingController.getBookingById)
 const getPaymentById = async (req, res) => {
     const { id } = req.params;
+    const { id: usuarioId, tipo_usuario: tipoUsuario } = req.user;
     try {
+        const params = [id];
+        let condition = 'p.id = $1';
+
+        if (tipoUsuario !== 'admin' && tipoUsuario !== 'recepcionista') {
+            params.push(usuarioId);
+            condition += ` AND r.usuario_id = $${params.length}`;
+        }
+
         const payment = await pool.query(
             `SELECT
                 p.id,
@@ -100,11 +142,11 @@ const getPaymentById = async (req, res) => {
                 quartos q ON r.quarto_id = q.id
             LEFT JOIN
                 hospedes hp ON r.hospede_principal_id = hp.id
-            WHERE p.id = $1`,
-            [id]
+            WHERE ${condition}`,
+            params
         );
         if (payment.rows.length === 0) {
-            return res.status(404).json({ message: 'Pagamento não encontrado.' });
+            return res.status(404).json({ message: 'Pagamento não encontrado ou você não tem permissão para acessá-lo.' });
         }
         res.status(200).json(payment.rows[0]);
     } catch (err) {
@@ -114,12 +156,17 @@ const getPaymentById = async (req, res) => {
 };
 
 // Atualizar um pagamento (status, método, valor)
+// Transação: UPDATE do pagamento + sincronização da movimentação financeira
+// correspondente (gera/atualiza receita se "aprovado", estorna se deixou de ser).
 const updatePayment = async (req, res) => {
     const { id } = req.params;
     const { valor_pago, metodo_pagamento, status_pagamento } = req.body;
 
+    const client = await pool.connect();
     try {
-        const updatedPayment = await pool.query(
+        await client.query('BEGIN');
+
+        const updatedPayment = await client.query(
             `UPDATE pagamentos SET
                 valor_pago = COALESCE($1, valor_pago),
                 metodo_pagamento = COALESCE($2, metodo_pagamento),
@@ -130,32 +177,66 @@ const updatePayment = async (req, res) => {
         );
 
         if (updatedPayment.rows.length === 0) {
+            await client.query('ROLLBACK');
             return res.status(404).json({ message: 'Pagamento não encontrado para atualização.' });
         }
+        const payment = updatedPayment.rows[0];
 
+        if (payment.status_pagamento === 'aprovado') {
+            await sincronizarReceitaDoPagamento(client, {
+                pagamentoId: payment.id,
+                reservaId: payment.reserva_id,
+                valorPago: payment.valor_pago,
+                metodoPagamento: payment.metodo_pagamento,
+                criadoPor: req.user.id,
+            });
+        } else {
+            // Deixou de estar aprovado (cancelamento/estorno) -> a receita correspondente
+            // é estornada, nunca apagada.
+            await estornarReceitaDoPagamento(client, payment.id);
+        }
+
+        await client.query('COMMIT');
         res.status(200).json({
             message: 'Pagamento atualizado com sucesso!',
-            payment: updatedPayment.rows[0]
+            payment
         });
 
     } catch (err) {
+        await client.query('ROLLBACK');
         console.error('Erro ao atualizar pagamento:', err.message);
         res.status(500).json({ message: 'Erro no servidor ao atualizar pagamento.', error: err.message });
+    } finally {
+        client.release();
     }
 };
 
 // Deletar um pagamento
+// Transação: a receita automática correspondente é estornada (preservada, nunca
+// apagada) ANTES de excluir o pagamento; o FK pagamento_id (ON DELETE SET NULL)
+// cuida do resto, mas "descricao" já guarda a origem permanentemente.
 const deletePayment = async (req, res) => {
     const { id } = req.params;
+    const client = await pool.connect();
     try {
-        const deletedPayment = await pool.query('DELETE FROM pagamentos WHERE id = $1 RETURNING id', [id]);
+        await client.query('BEGIN');
+
+        await estornarReceitaDoPagamento(client, id);
+
+        const deletedPayment = await client.query('DELETE FROM pagamentos WHERE id = $1 RETURNING id', [id]);
         if (deletedPayment.rows.length === 0) {
+            await client.query('ROLLBACK');
             return res.status(404).json({ message: 'Pagamento não encontrado para exclusão.' });
         }
+
+        await client.query('COMMIT');
         res.status(200).json({ message: 'Pagamento excluído com sucesso!', id: id });
     } catch (err) {
+        await client.query('ROLLBACK');
         console.error('Erro ao deletar pagamento:', err.message);
         res.status(500).json({ message: 'Erro no servidor ao deletar pagamento.', error: err.message });
+    } finally {
+        client.release();
     }
 };
 

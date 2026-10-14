@@ -5,8 +5,8 @@ const auth = require('../middleware/authMiddleware');
 const authorize = require('../middleware/authorize');
 
 // Rotas do CRUD de Pagamentos
-router.post('/', auth, paymentController.createPayment);
-router.get('/', auth, paymentController.getAllPayments);
+router.post('/', auth, authorize(['admin', 'recepcionista']), paymentController.createPayment); // só quem confirma recebimento pode registrar
+router.get('/', auth, paymentController.getAllPayments); // filtrado por dono da reserva dentro do controller
 
 // NOVA ORDEM: A rota mais específica deve vir ANTES da rota com parâmetro dinâmico
 router.get('/resumos-reservas', auth, authorize(['admin', 'recepcionista']), paymentController.getReservationPaymentSummaries); // <-- MOVIDA PARA CIMA
