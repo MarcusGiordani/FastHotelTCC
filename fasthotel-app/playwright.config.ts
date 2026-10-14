@@ -79,6 +79,9 @@ export default defineConfig({
         BROWSER: 'none',
         PORT: String(FRONTEND_PORT),
         REACT_APP_API_URL: `${API_URL}/api`,
+        // Sem isso, o socket do navegador caía no default de .env (porta 5000,
+        // onde não há nada ouvindo no ambiente de E2E) em vez da API de teste.
+        REACT_APP_SOCKET_URL: API_URL,
       },
       url: FRONTEND_URL,
       reuseExistingServer: false,

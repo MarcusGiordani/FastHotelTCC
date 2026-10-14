@@ -15,6 +15,10 @@ import ChatList from '../pages/ChatList';
 import ChatOnline from '../pages/ChatOnline';
 import Settings from '../pages/Settings';
 import Analytics from '../pages/Analytics';
+import Cleaning from '../pages/Cleaning';
+import Inventory from '../pages/Inventory';
+import Finance from '../pages/Finance';
+import Apartments from '../pages/Apartments';
 
 const AppRoutes: React.FC = () => {
   return (
@@ -33,6 +37,11 @@ const AppRoutes: React.FC = () => {
         <Route path="/payments/details/:reservaId" element={<PrivateRoute><PaymentDetails /></PrivateRoute>} />
 
         <Route path="/reservations" element={<PrivateRoute><Reservations /></PrivateRoute>} />
+
+        <Route path="/apartamentos" element={<PrivateRoute><Apartments /></PrivateRoute>} />
+        <Route path="/limpeza" element={<PrivateRoute><Cleaning /></PrivateRoute>} />
+        <Route path="/estoque" element={<PrivateRoute><Inventory /></PrivateRoute>} />
+        <Route path="/financeiro" element={<PrivateRoute><Finance /></PrivateRoute>} />
 
         <Route path="/chat" element={<PrivateRoute><ChatList /></PrivateRoute>} />
         <Route path="/chat/online/:conversaId" element={<PrivateRoute><ChatOnline /></PrivateRoute>} />

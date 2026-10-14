@@ -10,6 +10,7 @@ const cors = require('cors');
 const pool = require('./config/db');
 const userRoutes = require('./routes/userRoutes');
 const roomRoutes = require('./routes/roomRoutes');
+const roomTypeRoutes = require('./routes/roomTypeRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const guestRoutes = require('./routes/guestRoutes');
 const serviceRoutes = require('./routes/serviceRoutes');
@@ -17,6 +18,9 @@ const consumptionRoutes = require('./routes/consumptionRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const chatRoutes = require('./routes/chatRoutes');
+const cleaningRoutes = require('./routes/cleaningRoutes');
+const inventoryRoutes = require('./routes/inventoryRoutes');
+const financeRoutes = require('./routes/financeRoutes');
 
 const app = express();
 
@@ -47,6 +51,7 @@ app.get('/test-db', async (req, res) => {
 // Usar as rotas da API REST
 app.use('/api/usuarios', userRoutes);
 app.use('/api/quartos', roomRoutes);
+app.use('/api/tipos-quarto', roomTypeRoutes);
 app.use('/api/reservas', bookingRoutes);
 app.use('/api/hospedes', guestRoutes);
 app.use('/api/servicos', serviceRoutes);
@@ -54,5 +59,8 @@ app.use('/api/consumos', consumptionRoutes);
 app.use('/api/pagamentos', paymentRoutes);
 app.use('/api/relatorios', reportRoutes);
 app.use('/api/chat', chatRoutes); // Usar as rotas de chat
+app.use('/api/limpeza', cleaningRoutes);
+app.use('/api/estoque', inventoryRoutes);
+app.use('/api/financeiro', financeRoutes);
 
 module.exports = app;

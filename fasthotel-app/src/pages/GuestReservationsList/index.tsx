@@ -1,7 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import styled from 'styled-components';
 import SideMenu from '../../components/SideMenu';
 import { apiFetch } from '../../utils/api';
+
+// Mesmo padrão responsivo usado nas demais páginas: em mobile o menu vira overlay
+// (position:fixed) e o conteúdo nunca reserva espaço para ele.
+const Content = styled.div<{ isMenuOpen: boolean }>`
+  flex: 1;
+  padding: 30px;
+  padding-left: ${({ isMenuOpen }) => (isMenuOpen ? '280px' : '30px')};
+  color: #fff;
+  transition: padding-left 0.3s ease-in-out;
+
+  @media (max-width: 768px) {
+    padding-left: 20px;
+  }
+`;
 
 interface Reservation {
   id: number;
@@ -34,7 +49,7 @@ const GuestReservationsList: React.FC = () => {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#1a2a42' }}>
       <SideMenu isOpen={isMenuOpen} onToggle={() => setIsMenuOpen(v => !v)} />
-      <div style={{ flex: 1, padding: '30px', paddingLeft: isMenuOpen ? '280px' : '30px', color: '#fff' }}>
+      <Content isMenuOpen={isMenuOpen}>
         <h1 style={{ marginBottom: '20px' }}>Reservas do Hóspede</h1>
 
         {loading && <p>Carregando reservas...</p>}
@@ -75,7 +90,7 @@ const GuestReservationsList: React.FC = () => {
         >
           Voltar para Hóspedes
         </button>
-      </div>
+      </Content>
     </div>
   );
 };

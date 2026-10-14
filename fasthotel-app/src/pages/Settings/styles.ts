@@ -22,6 +22,11 @@ export const MainContent = styled.div<{ isMenuOpen: boolean }>`
 
   justify-content: flex-start;
   align-items: center;
+
+  @media (max-width: 768px) {
+    /* Mobile: o menu vira overlay (position:fixed) — o conteúdo nunca reserva espaço pra ele. */
+    padding-left: 20px;
+  }
 `;
 
 export const Header = styled.div`

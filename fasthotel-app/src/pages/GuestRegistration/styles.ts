@@ -19,7 +19,8 @@ export const MainContent = styled.div<{ isMenuOpen: boolean }>`
   flex-direction: column;
 
   @media (max-width: 768px) {
-    padding-left: ${({ isMenuOpen }) => (isMenuOpen ? '220px' : '20px')};
+    /* Mobile: o menu vira overlay (position:fixed) — o conteúdo nunca reserva espaço pra ele. */
+    padding-left: 20px;
     padding: 15px;
   }
 `;
