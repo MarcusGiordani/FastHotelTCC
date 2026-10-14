@@ -14,6 +14,19 @@ const checkAvailabilityAndPrice = async (quarto_id, data_checkin, data_checkout,
             return { error: `Quarto ${room.numero} não está disponível (status: ${room.status}).` };
         }
 
+        // Disponibilidade operacional: quarto desocupado mas com limpeza pendente/em andamento
+        // não está pronto para outra hospedagem. Status de limpeza é independente do de ocupação
+        // (quartos.status) — mesma exceção de "reserva sendo atualizada" do check acima.
+        if (!reserva_id_to_ignore) {
+            const limpezaPendente = await pool.query(
+                `SELECT 1 FROM limpezas WHERE quarto_id = $1 AND status IN ('pendente', 'em_andamento') LIMIT 1`,
+                [quarto_id]
+            );
+            if (limpezaPendente.rows.length > 0) {
+                return { error: `Quarto ${room.numero} aguarda limpeza antes de receber outra hospedagem.` };
+            }
+        }
+
         let overlapQuery = `
             SELECT id FROM reservas
             WHERE quarto_id = $1
@@ -319,6 +332,17 @@ const finalizarReserva = async (req, res) => {
             WHERE id = $1;
         `;
         await client.query(updateQuartoQuery, [quartoId]);
+
+        // 3. Criar automaticamente a limpeza pendente deste quarto (Controle de Limpeza).
+        // Status de limpeza fica independente do status de ocupação setado acima.
+        // "ON CONFLICT (reserva_origem_id) DO NOTHING" garante, no nível do banco, que o
+        // mesmo checkout nunca gere um registro duplicado (reserva_origem_id é UNIQUE).
+        await client.query(
+            `INSERT INTO limpezas (quarto_id, reserva_origem_id, status)
+             VALUES ($1, $2, 'pendente')
+             ON CONFLICT (reserva_origem_id) DO NOTHING`,
+            [quartoId, reservaFinalizada.id]
+        );
 
         await client.query('COMMIT'); // Confirma a transação
         res.status(200).json({
