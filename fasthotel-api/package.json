@@ -5,16 +5,19 @@
   "license": "MIT",
   "scripts": {
     "start": "node server.js",
+    "db:migrate": "node scripts/apply-schema.js",
     "test": "jest",
     "test:unit": "jest",
     "test:integration": "jest --config jest.integration.config.js --runInBand",
-    "test:all": "jest && jest --config jest.integration.config.js --runInBand"
+    "test:security": "jest --config jest.security.config.js --runInBand && jest --config jest.security.bots.config.js --runInBand",
+    "test:all": "jest && jest --config jest.integration.config.js --runInBand && npm run test:security"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "express-rate-limit": "^8.7.1",
     "express-validator": "^7.2.1",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.12.0",

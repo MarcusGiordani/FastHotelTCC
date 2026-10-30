@@ -4,12 +4,14 @@ const userController = require('../controllers/userController');
 const auth = require('../middleware/authMiddleware');
 const authorize = require('../middleware/authorize'); // Certifique-se que está importado
 const { body, validationResult } = require('express-validator'); // <-- NOVO: Importar body e validationResult
+const { loginLimiter, registerLimiter } = require('../middleware/rateLimiter');
 
 // Rotas para o CRUD de Usuários
 
 // Cadastro público — sempre cria "cliente" (controller ignora qualquer tipo_usuario enviado)
 router.post(
     '/',
+    registerLimiter,
     [
         body('nome').trim().notEmpty().withMessage('Nome é obrigatório.').isLength({ min: 3 }).withMessage('Nome deve ter pelo menos 3 caracteres.'),
         body('email').isEmail().withMessage('Email inválido.').normalizeEmail(),
@@ -40,6 +42,7 @@ router.delete('/:id', auth, authorize(['admin']), userController.deleteUser); //
 // Rota de Login
 router.post(
     '/login',
+    loginLimiter,
     [ // Mesma normalização de e-mail aplicada no cadastro, para o lookup bater com o valor gravado
         body('email').isEmail().withMessage('Email inválido.').normalizeEmail(),
         body('senha').notEmpty().withMessage('Senha é obrigatória.')

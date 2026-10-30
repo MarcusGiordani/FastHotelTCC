@@ -29,3 +29,12 @@ if (process.env.PGDATABASE !== EXPECTED_DB) {
 }
 
 process.env.NODE_ENV = 'test';
+
+// Os testes de integração funcionais (não são os de segurança) criam e autenticam
+// dezenas de usuários descartáveis por arquivo, no mesmo processo Node, o que
+// tropeçaria no rate limiting real de login/cadastro (middleware/rateLimiter.js).
+// Mantemos o middleware ativo (não é mockado) mas com um teto alto, só neste
+// ambiente funcional — o comportamento real de bloqueio é verificado à parte,
+// com limites baixos, em tests/security/bots.test.js.
+process.env.RATE_LIMIT_LOGIN_MAX = process.env.RATE_LIMIT_LOGIN_MAX || '100000';
+process.env.RATE_LIMIT_REGISTER_MAX = process.env.RATE_LIMIT_REGISTER_MAX || '100000';
