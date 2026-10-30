@@ -1,0 +1,127 @@
+name: Deploy
+
+# Dispara em todo push na branch principal (requisito do professor: ponto
+# extra 2) e também pode ser disparado manualmente, para facilitar a
+# apresentação presencial.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  # ---------------------------------------------------------------------
+  # 1) VALIDAÇÃO — mesmas verificações obrigatórias do CI (incluindo os 4
+  #    grupos de testes de segurança). O deploy só roda se este job passar.
+  # ---------------------------------------------------------------------
+  validate:
+    name: Validação obrigatória (testes + build)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: fasthotel_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Preparar fasthotel-api/.env.test (credenciais somente de teste)
+        run: |
+          cat > fasthotel-api/.env.test <<'EOF'
+          PGUSER=postgres
+          PGPASSWORD=postgres
+          PGHOST=localhost
+          PGPORT=5432
+          PGDATABASE=fasthotel_test
+          PGADMIN_DB=postgres
+          JWT_SECRET=ci-deploy-validation-only-secret
+          FRONTEND_URL=http://localhost:3000
+          EOF
+
+      - name: Instalar dependências do backend
+        working-directory: fasthotel-api
+        run: npm ci
+
+      - name: Testes unitários (backend)
+        working-directory: fasthotel-api
+        run: npm run test:unit
+
+      - name: Testes de integração (backend + PostgreSQL real)
+        working-directory: fasthotel-api
+        run: npm run test:integration
+
+      - name: "Testes de segurança — IDOR, senhas, SQL Injection e bots"
+        working-directory: fasthotel-api
+        run: npm run test:security
+
+      - name: Instalar dependências do frontend
+        working-directory: fasthotel-app
+        run: yarn install --frozen-lockfile
+
+      # Garante que o frontend REALMENTE compila antes de disparar o deploy
+      # (o build "de verdade" acontece depois, no Render — ver job "deploy").
+      - name: Build do frontend (validação)
+        working-directory: fasthotel-app
+        run: yarn build
+        env:
+          CI: "false"
+
+  # ---------------------------------------------------------------------
+  # 2) DEPLOY — só roda se "validate" passou E o push foi na branch main.
+  #    Publica via API do Render (serviços definidos em render.yaml).
+  # ---------------------------------------------------------------------
+  deploy:
+    name: Publicar no Render
+    needs: validate
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Confere, ANTES de tentar publicar, se os 3 segredos necessários
+      # existem. Se a hospedagem ainda não foi configurada (ver
+      # GITHUB_ACTIONS.md), o job falha com uma mensagem clara em vez de
+      # fingir que o deploy aconteceu.
+      - name: Verificar configuração do Render (GitHub Secrets)
+        run: |
+          faltando=""
+          [ -z "${{ secrets.RENDER_API_KEY }}" ] && faltando="$faltando RENDER_API_KEY"
+          [ -z "${{ secrets.RENDER_BACKEND_SERVICE_ID }}" ] && faltando="$faltando RENDER_BACKEND_SERVICE_ID"
+          [ -z "${{ secrets.RENDER_FRONTEND_SERVICE_ID }}" ] && faltando="$faltando RENDER_FRONTEND_SERVICE_ID"
+          if [ -n "$faltando" ]; then
+            echo "::error::GitHub Secrets ausentes:$faltando — configure-os antes de disparar o deploy (ver GITHUB_ACTIONS.md)."
+            exit 1
+          fi
+
+      - name: Disparar e acompanhar deploy do backend (fasthotel-api) no Render
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          SERVICE_ID: ${{ secrets.RENDER_BACKEND_SERVICE_ID }}
+        run: bash .github/scripts/render-deploy.sh "$SERVICE_ID" "backend (fasthotel-api)"
+
+      - name: Disparar e acompanhar deploy do frontend (fasthotel-app) no Render
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          SERVICE_ID: ${{ secrets.RENDER_FRONTEND_SERVICE_ID }}
+        run: bash .github/scripts/render-deploy.sh "$SERVICE_ID" "frontend (fasthotel-app)"
+
+      - name: Resultado do deploy
+        run: echo "::notice::Deploy do backend e do frontend concluído com sucesso no Render."

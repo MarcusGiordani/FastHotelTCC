@@ -1,0 +1,83 @@
+name: Testes de Segurança
+
+# Roda em todo Pull Request para "main" (requisito do professor: ponto extra 1)
+# e também pode ser disparado manualmente pela aba Actions do GitHub, para
+# facilitar a apresentação presencial (workflow_dispatch).
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  security-tests:
+    name: IDOR, senhas, SQL Injection e bots (fasthotel-api)
+    runs-on: ubuntu-latest
+
+    # PostgreSQL de teste isolado, fornecido pelo próprio GitHub Actions
+    # (nunca o banco de desenvolvimento/produção). Mesmo padrão já usado em
+    # .github/workflows/ci.yml.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: fasthotel_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # tests/security/setup.env.js e tests/security/setup.bots.env.js exigem
+      # fasthotel-api/.env.test. Credenciais SOMENTE de teste, coerentes com o
+      # service container acima — nenhuma senha real.
+      - name: Preparar fasthotel-api/.env.test (credenciais somente de teste)
+        run: |
+          cat > fasthotel-api/.env.test <<'EOF'
+          PGUSER=postgres
+          PGPASSWORD=postgres
+          PGHOST=localhost
+          PGPORT=5432
+          PGDATABASE=fasthotel_test
+          PGADMIN_DB=postgres
+          JWT_SECRET=ci-security-tests-only-secret
+          FRONTEND_URL=http://localhost:3000
+          EOF
+
+      - name: Instalar dependências (npm ci — respeita package-lock.json)
+        working-directory: fasthotel-api
+        run: npm ci
+
+      # Um step por tema (em vez de um único "npm run test:security") para
+      # que a aba Actions mostre o resultado de cada grupo separadamente —
+      # exatamente o que a atividade pede para a apresentação presencial.
+      # As tabelas são criadas automaticamente a partir de database/schema.sql
+      # (globalSetup do Jest, idêntico ao de test:integration).
+
+      - name: "Tema 1 — IDOR"
+        working-directory: fasthotel-api
+        run: npx jest --config jest.security.config.js --runInBand tests/security/idor.test.js
+
+      - name: "Tema 2 — Criptografia e senhas"
+        working-directory: fasthotel-api
+        run: npx jest --config jest.security.config.js --runInBand tests/security/passwords.test.js
+
+      - name: "Tema 3 — Injeção de código / SQL Injection"
+        working-directory: fasthotel-api
+        run: npx jest --config jest.security.config.js --runInBand tests/security/injection.test.js
+
+      - name: "Tema 4 — Bots / requisições automatizadas"
+        working-directory: fasthotel-api
+        run: npx jest --config jest.security.bots.config.js --runInBand

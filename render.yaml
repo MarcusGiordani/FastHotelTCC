@@ -1,0 +1,61 @@
+# render.yaml — Blueprint do Render (Infrastructure as Code).
+#
+# Define os 3 recursos necessários para publicar o FastHotel: backend
+# (Web Service Node/Express + Socket.IO), frontend (Static Site React) e
+# banco de dados (PostgreSQL gerenciado). Nenhum dado real/sensível aqui —
+# só estrutura; segredos (JWT_SECRET, URLs) são preenchidos manualmente no
+# painel do Render depois que os serviços são criados (ver GITHUB_ACTIONS.md).
+#
+# Como usar: no painel do Render, "New +" -> "Blueprint" -> conectar este
+# repositório. O Render lê este arquivo e cria os 3 recursos automaticamente.
+# Alternativa manual (sem Blueprint): criar os 3 recursos um a um pelo
+# painel, replicando exatamente esta configuração.
+
+databases:
+  - name: fasthotel-db
+    plan: free
+    databaseName: fasthotel_db
+    user: fasthotel
+
+services:
+  - type: web
+    name: fasthotel-api
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: fasthotel-api
+    # db:migrate aplica database/schema.sql (idempotente) antes de cada deploy.
+    buildCommand: npm ci && npm run db:migrate
+    startCommand: npm start
+    envVars:
+      - key: PGUSER
+        fromDatabase: { name: fasthotel-db, property: user }
+      - key: PGPASSWORD
+        fromDatabase: { name: fasthotel-db, property: password }
+      - key: PGHOST
+        fromDatabase: { name: fasthotel-db, property: host }
+      - key: PGPORT
+        fromDatabase: { name: fasthotel-db, property: port }
+      - key: PGDATABASE
+        fromDatabase: { name: fasthotel-db, property: database }
+      # Preencher manualmente no painel do Render após criar os serviços:
+      - key: JWT_SECRET
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+
+  - type: web
+    runtime: static
+    name: fasthotel-app
+    plan: free
+    rootDir: fasthotel-app
+    buildCommand: yarn install --frozen-lockfile && yarn build
+    staticPublishPath: build
+    envVars:
+      # Preencher manualmente no painel do Render com a URL pública do
+      # serviço fasthotel-api (ex.: https://fasthotel-api.onrender.com/api).
+      - key: REACT_APP_API_URL
+        sync: false
+      # Mesma URL do backend, sem o "/api" (usada pelo cliente Socket.IO do chat).
+      - key: REACT_APP_SOCKET_URL
+        sync: false
